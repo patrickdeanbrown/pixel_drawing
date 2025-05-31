@@ -9,6 +9,7 @@ from tkinter import ttk, filedialog, messagebox, colorchooser
 from PIL import Image, ImageTk, ImageDraw
 import json
 import os
+import math
 from typing import Tuple, Optional, List
 
 
@@ -176,6 +177,7 @@ class PixelDrawingApp:
         # Initialize variables
         self.current_file = None
         self.current_color = "#000000"
+        self.recent_colors = ["#FFFFFF"] * 6  # Last 6 colors, start with white
         
         self.setup_ui()
         
@@ -234,12 +236,40 @@ class PixelDrawingApp:
         color_frame = ttk.LabelFrame(side_panel, text="Color")
         color_frame.pack(fill="x", pady=(0, 10))
         
+        # Current color display
         self.color_display = tk.Label(color_frame, bg=self.current_color, 
                                      width=10, height=2, relief="solid", bd=1)
         self.color_display.pack(pady=5)
         
         ttk.Button(color_frame, text="Choose Color", 
-                  command=self.choose_color).pack(pady=5)
+                  command=self.choose_color).pack(pady=2)
+        
+        # Base color palette (16 colors)
+        palette_frame = tk.Frame(color_frame)
+        palette_frame.pack(pady=5)
+        tk.Label(palette_frame, text="Base Colors:", font=("Arial", 8)).pack(anchor="w")
+        
+        base_colors = [
+            "#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
+            "#800000", "#808080", "#800080", "#008000", "#000080", "#808000", "#FFA500", "#FFC0CB"
+        ]
+        
+        self.create_color_grid(palette_frame, base_colors, 8, 2)
+        
+        # Recent colors
+        recent_frame = tk.Frame(color_frame)
+        recent_frame.pack(pady=5)
+        tk.Label(recent_frame, text="Recent Colors:", font=("Arial", 8)).pack(anchor="w")
+        
+        self.recent_color_buttons = []
+        self.create_recent_colors_grid(recent_frame)
+        
+        # Color wheel
+        wheel_frame = tk.Frame(color_frame)
+        wheel_frame.pack(pady=5)
+        tk.Label(wheel_frame, text="Color Wheel:", font=("Arial", 8)).pack(anchor="w")
+        
+        self.create_color_wheel(wheel_frame)
         
         # Canvas size section
         size_frame = ttk.LabelFrame(side_panel, text="Canvas Size")
@@ -267,13 +297,248 @@ class PixelDrawingApp:
         """Change the current drawing tool."""
         self.canvas.current_tool = self.tool_var.get()
         
+    def create_color_grid(self, parent, colors, cols, rows):
+        """Create a grid of color buttons."""
+        grid_frame = tk.Frame(parent)
+        grid_frame.pack()
+        
+        for i, color in enumerate(colors):
+            row = i // cols
+            col = i % cols
+            
+            # Create frame with padding for hover effect
+            btn_frame = tk.Frame(grid_frame, width=24, height=24)
+            btn_frame.grid(row=row, column=col, padx=2, pady=2)
+            btn_frame.grid_propagate(False)
+            
+            btn = tk.Button(btn_frame, bg=color, relief="solid", bd=1,
+                           command=lambda c=color: self.set_color(c))
+            btn.place(relx=0.5, rely=0.5, anchor="center", width=18, height=18)
+            
+            # Add hover effects that don't change size
+            def on_enter(e, button=btn, frame=btn_frame):
+                button.config(bd=3)
+                frame.config(highlightbackground="#0066CC", highlightthickness=2)
+            
+            def on_leave(e, button=btn, frame=btn_frame):
+                button.config(bd=1)
+                frame.config(highlightthickness=0)
+            
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+    
+    def create_recent_colors_grid(self, parent):
+        """Create grid for recent colors."""
+        grid_frame = tk.Frame(parent)
+        grid_frame.pack()
+        
+        for i in range(6):
+            row = i // 6
+            col = i % 6
+            
+            # Create frame with padding for hover effect
+            btn_frame = tk.Frame(grid_frame, width=24, height=24)
+            btn_frame.grid(row=row, column=col, padx=2, pady=2)
+            btn_frame.grid_propagate(False)
+            
+            btn = tk.Button(btn_frame, bg=self.recent_colors[i], relief="solid", bd=1,
+                           command=lambda idx=i: self.set_color(self.recent_colors[idx]))
+            btn.place(relx=0.5, rely=0.5, anchor="center", width=18, height=18)
+            
+            # Add hover effects that don't change size
+            def on_enter(e, button=btn, frame=btn_frame):
+                button.config(bd=3)
+                frame.config(highlightbackground="#0066CC", highlightthickness=2)
+            
+            def on_leave(e, button=btn, frame=btn_frame):
+                button.config(bd=1)
+                frame.config(highlightthickness=0)
+            
+            btn.bind("<Enter>", on_enter)
+            btn.bind("<Leave>", on_leave)
+            
+            self.recent_color_buttons.append((btn, btn_frame))
+    
+    def create_color_wheel(self, parent):
+        """Create a smooth gradient color wheel like Photoshop/Paint."""
+        wheel_size = 150
+        self.color_wheel = tk.Canvas(parent, width=wheel_size, height=wheel_size, 
+                                   bg=parent.cget('bg'), highlightthickness=0)
+        self.color_wheel.pack(pady=5)
+        
+        center = wheel_size // 2
+        outer_radius = center - 10
+        inner_radius = 20
+        
+        # Create smooth color wheel with many small segments
+        for angle in range(360):
+            # Calculate hue from angle - adjust so red is at top (0 degrees)
+            # Standard color wheel has red at top, going clockwise
+            adjusted_angle = (90 - angle) % 360  # Start with red at top
+            hue = adjusted_angle / 360.0
+            
+            # Draw radial gradient from center to edge
+            for radius in range(inner_radius, outer_radius, 2):
+                # Calculate saturation based on distance from center
+                saturation = min(1.0, (radius - inner_radius) / (outer_radius - inner_radius))
+                
+                # Full brightness for the main wheel
+                value = 1.0
+                
+                # Convert HSV to RGB
+                rgb = self.hsv_to_rgb(hue, saturation, value)
+                color = "#{:02x}{:02x}{:02x}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+                
+                # Calculate start and end points for this segment
+                x1 = center + radius * math.cos(math.radians(angle))
+                y1 = center + radius * math.sin(math.radians(angle))
+                x2 = center + (radius + 2) * math.cos(math.radians(angle))
+                y2 = center + (radius + 2) * math.sin(math.radians(angle))
+                
+                # Draw the color segment
+                self.color_wheel.create_line(x1, y1, x2, y2, fill=color, width=3)
+        
+        # Add white center for easy white selection
+        self.color_wheel.create_oval(center - inner_radius, center - inner_radius,
+                                   center + inner_radius, center + inner_radius,
+                                   fill="white", outline="#CCCCCC", width=2)
+        
+        # Add brightness/saturation square below the wheel
+        square_size = 100
+        square_y = wheel_size + 10
+        self.brightness_square = tk.Canvas(parent, width=square_size, height=square_size, 
+                                         bg=parent.cget('bg'), highlightthickness=0)
+        self.brightness_square.pack(pady=5)
+        
+        # Draw brightness/saturation gradient square
+        self.current_hue = 0.0  # Will be updated when wheel is clicked
+        self.draw_brightness_square()
+        
+        # Bind click events
+        self.color_wheel.bind("<Button-1>", self.on_wheel_click)
+        self.brightness_square.bind("<Button-1>", self.on_brightness_click)
+    
+    def hsv_to_rgb(self, h, s, v):
+        """Convert HSV to RGB."""
+        if s == 0.0:
+            return (v, v, v)
+        
+        i = int(h * 6.0)
+        f = (h * 6.0) - i
+        p, q, t = v * (1.0 - s), v * (1.0 - s * f), v * (1.0 - s * (1.0 - f))
+        
+        if i % 6 == 0:
+            return (v, t, p)
+        elif i % 6 == 1:
+            return (q, v, p)
+        elif i % 6 == 2:
+            return (p, v, t)
+        elif i % 6 == 3:
+            return (p, q, v)
+        elif i % 6 == 4:
+            return (t, p, v)
+        else:
+            return (v, p, q)
+    
+    def draw_brightness_square(self):
+        """Draw the brightness/saturation selection square."""
+        square_size = 100
+        self.brightness_square.delete("all")
+        
+        # Draw gradient square for current hue
+        for x in range(0, square_size, 2):
+            for y in range(0, square_size, 2):
+                # Calculate saturation (left to right) and value/brightness (top to bottom)
+                saturation = x / square_size
+                value = 1.0 - (y / square_size)  # Top is bright, bottom is dark
+                
+                # Convert HSV to RGB using current hue
+                rgb = self.hsv_to_rgb(self.current_hue, saturation, value)
+                color = "#{:02x}{:02x}{:02x}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+                
+                # Draw small rectangle for this color
+                self.brightness_square.create_rectangle(x, y, x+2, y+2, fill=color, outline=color)
+    
+    def on_wheel_click(self, event):
+        """Handle color wheel click."""
+        wheel_size = 150
+        center = wheel_size // 2
+        x = event.x - center
+        y = event.y - center
+        
+        # Calculate distance from center
+        distance = math.sqrt(x*x + y*y)
+        inner_radius = 20
+        outer_radius = center - 10
+        
+        if distance < inner_radius:  # Center white area
+            self.set_color("#FFFFFF")
+            return
+        elif distance < outer_radius:  # Color wheel area
+            # Calculate angle in degrees
+            angle_rad = math.atan2(y, x)
+            angle_deg = math.degrees(angle_rad)
+            
+            # Convert to the same coordinate system as the wheel drawing
+            # atan2 gives us -180 to 180, convert to 0-360
+            if angle_deg < 0:
+                angle_deg += 360
+            
+            # Apply the same transformation as in drawing: red at top
+            adjusted_angle = (90 - angle_deg) % 360
+            hue = adjusted_angle / 360.0
+            
+            # Calculate saturation based on distance
+            saturation = min(1.0, (distance - inner_radius) / (outer_radius - inner_radius))
+            
+            # Full brightness
+            value = 1.0
+            
+            # Update current hue and redraw brightness square
+            self.current_hue = hue
+            self.draw_brightness_square()
+            
+            # Convert to RGB and set color
+            rgb = self.hsv_to_rgb(hue, saturation, value)
+            color = "#{:02x}{:02x}{:02x}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+            self.set_color(color)
+    
+    def on_brightness_click(self, event):
+        """Handle brightness/saturation square click."""
+        square_size = 100
+        
+        # Calculate saturation and value from click position
+        saturation = min(1.0, event.x / square_size)
+        value = max(0.0, 1.0 - (event.y / square_size))
+        
+        # Use current hue with new saturation and value
+        rgb = self.hsv_to_rgb(self.current_hue, saturation, value)
+        color = "#{:02x}{:02x}{:02x}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
+        self.set_color(color)
+    
+    def set_color(self, color):
+        """Set the current color and update recent colors."""
+        # Add to recent colors if it's not already there
+        if color != self.current_color and color not in self.recent_colors:
+            self.recent_colors.insert(0, color)
+            self.recent_colors = self.recent_colors[:6]  # Keep only last 6
+            self.update_recent_colors_display()
+        
+        self.current_color = color
+        self.canvas.current_color = self.current_color
+        self.color_display.config(bg=self.current_color)
+    
+    def update_recent_colors_display(self):
+        """Update the recent colors grid display."""
+        for i, (btn, frame) in enumerate(self.recent_color_buttons):
+            btn.config(bg=self.recent_colors[i])
+            btn.config(command=lambda idx=i: self.set_color(self.recent_colors[idx]))
+    
     def choose_color(self):
         """Open color chooser dialog."""
         color = colorchooser.askcolor(color=self.current_color)
         if color[1]:  # If a color was selected
-            self.current_color = color[1]
-            self.canvas.current_color = self.current_color
-            self.color_display.config(bg=self.current_color)
+            self.set_color(color[1])
     
     def new_file(self):
         """Create a new file."""

@@ -1,10 +1,15 @@
 """Pan tool for moving the canvas viewport."""
 
 from PyQt6.QtGui import QColor, QCursor
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QObject
 
 from .base import DrawingTool
 from ...models import PixelArtModel
+
+
+class PanToolSignals(QObject):
+    """Signal container for PanTool."""
+    pan_requested = pyqtSignal(int, int)  # delta_x, delta_y
 
 
 class PanTool(DrawingTool):
@@ -15,8 +20,6 @@ class PanTool(DrawingTool):
     the viewport. Emits signals to coordinate with scrollable containers.
     """
     
-    # Signal emitted when panning is requested
-    pan_requested = pyqtSignal(int, int)  # delta_x, delta_y
     
     def __init__(self, model: PixelArtModel):
         """Initialize pan tool.
@@ -27,6 +30,7 @@ class PanTool(DrawingTool):
         # Use hand cursor for pan tool
         hand_cursor = QCursor(Qt.CursorShape.OpenHandCursor)
         super().__init__("Pan", model, cursor=hand_cursor, shortcut="H")
+        self.signals = PanToolSignals()
         self._is_panning = False
         self._last_pan_point = QPoint()
         
@@ -58,7 +62,7 @@ class PanTool(DrawingTool):
             delta = current_point - self._last_pan_point
             
             # Emit pan request with delta movement
-            self.pan_requested.emit(delta.x(), delta.y())
+            self.signals.pan_requested.emit(delta.x(), delta.y())
             
             # Update last point for next move
             self._last_pan_point = current_point

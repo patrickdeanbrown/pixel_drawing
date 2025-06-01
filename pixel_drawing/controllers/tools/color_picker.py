@@ -8,6 +8,11 @@ from ...models import PixelArtModel
 from ...exceptions import ValidationError
 
 
+class ColorPickerToolSignals(QObject):
+    """Signal container for ColorPickerTool."""
+    color_picked = pyqtSignal(QColor)
+
+
 class ColorPickerTool(DrawingTool):
     """Color picker tool for sampling colors from the canvas.
     
@@ -16,8 +21,6 @@ class ColorPickerTool(DrawingTool):
     to notify the UI to update the current color.
     """
     
-    # Signal emitted when a color is picked
-    color_picked = pyqtSignal(QColor)
     
     def __init__(self, model: PixelArtModel):
         """Initialize color picker tool.
@@ -26,6 +29,7 @@ class ColorPickerTool(DrawingTool):
             model: PixelArtModel to sample colors from
         """
         super().__init__("Color Picker", model, shortcut="I")
+        self.signals = ColorPickerToolSignals()
         # Note: We'll need to connect the signal in the tool manager or main window
         
     def on_press(self, x: int, y: int, color: QColor) -> bool:
@@ -41,7 +45,7 @@ class ColorPickerTool(DrawingTool):
         """
         try:
             sampled_color = self._model.get_pixel(x, y)
-            self.color_picked.emit(sampled_color)
+            self.signals.color_picked.emit(sampled_color)
             return False  # No move events needed for color picking
         except ValidationError:
             return False

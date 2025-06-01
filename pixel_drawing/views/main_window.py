@@ -5,7 +5,7 @@ from functools import partial
 from typing import Optional
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QFrame, QGroupBox, QSpinBox, QFileDialog, QMessageBox,
     QColorDialog, QToolBar
 )
@@ -132,6 +132,7 @@ class PixelDrawingApp(QMainWindow):
         self.canvas.color_used.connect(self._on_color_used)
         self.canvas.tool_changed.connect(self._on_tool_changed)
         self.canvas.pixel_hovered.connect(self._on_pixel_hovered)
+        # Color used signal will handle color picker integration automatically
         canvas_layout.addWidget(self.canvas, alignment=Qt.AlignmentFlag.AlignCenter)
         
         main_layout.addWidget(canvas_frame, 1)
@@ -172,6 +173,29 @@ class PixelDrawingApp(QMainWindow):
         export_action = QAction("Export PNG", self)
         export_action.triggered.connect(self.export_png)
         toolbar.addAction(export_action)
+        
+        toolbar.addSeparator()
+        
+        # Color display in toolbar
+        color_widget = QWidget()
+        color_layout = QHBoxLayout(color_widget)
+        color_layout.setContentsMargins(5, 0, 5, 0)
+        
+        # Current color display (larger)
+        self.toolbar_current_color = QLabel()
+        self.toolbar_current_color.setFixedSize(32, 24)
+        self.toolbar_current_color.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
+        self.toolbar_current_color.setToolTip("Current Color")
+        color_layout.addWidget(self.toolbar_current_color)
+        
+        # Background color display (smaller, overlapped)
+        self.toolbar_bg_color = QLabel()
+        self.toolbar_bg_color.setFixedSize(20, 16)
+        self.toolbar_bg_color.setStyleSheet(f"background-color: {AppConstants.DEFAULT_BG_COLOR}; border: 1px solid #CCCCCC;")
+        self.toolbar_bg_color.setToolTip("Background Color")
+        color_layout.addWidget(self.toolbar_bg_color)
+        
+        toolbar.addWidget(color_widget)
     
     def create_side_panel(self, main_layout) -> None:
         """Create the side panel with tools and options."""
@@ -183,22 +207,27 @@ class PixelDrawingApp(QMainWindow):
         tools_group = QGroupBox("Tools")
         tools_layout = QVBoxLayout(tools_group)
         
-        # Create brush tool button with icon
-        self.brush_btn = QPushButton("Brush")
-        self.brush_btn.setIcon(self.create_svg_icon("icons/paint-brush.svg"))
-        self.brush_btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
-        self.brush_btn.setCheckable(True)
-        self.brush_btn.setChecked(True)
-        self.brush_btn.clicked.connect(lambda: self.set_tool("brush"))
-        tools_layout.addWidget(self.brush_btn)
+        # Create tool buttons dynamically from tool manager
+        self.tool_buttons = {}
+        tool_configs = {
+            "brush": {"icon": "icons/paint-brush.svg", "tooltip": "Brush Tool (B)", "checked": True},
+            "fill": {"icon": "icons/paint-bucket.svg", "tooltip": "Fill Bucket Tool (F)", "checked": False},
+            "eraser": {"icon": "icons/eraser.svg", "tooltip": "Eraser Tool (E)", "checked": False},
+            "picker": {"icon": "icons/eyedropper.svg", "tooltip": "Color Picker Tool (I)", "checked": False},
+            "pan": {"icon": "icons/hand.svg", "tooltip": "Pan Tool (H)", "checked": False}
+        }
         
-        # Create fill tool button with icon
-        self.fill_btn = QPushButton("Fill Bucket")
-        self.fill_btn.setIcon(self.create_svg_icon("icons/paint-bucket.svg"))
-        self.fill_btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
-        self.fill_btn.setCheckable(True)
-        self.fill_btn.clicked.connect(lambda: self.set_tool("fill"))
-        tools_layout.addWidget(self.fill_btn)
+        for tool_id, config in tool_configs.items():
+            btn = QPushButton()
+            btn.setIcon(self.create_svg_icon(config["icon"]))
+            btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
+            btn.setCheckable(True)
+            btn.setChecked(config["checked"])
+            btn.setToolTip(config["tooltip"])
+            btn.setFixedSize(AppConstants.ICON_SIZE + 16, AppConstants.ICON_SIZE + 16)
+            btn.clicked.connect(partial(self.set_tool, tool_id))
+            self.tool_buttons[tool_id] = btn
+            tools_layout.addWidget(btn)
         
         side_layout.addWidget(tools_group)
         
@@ -260,19 +289,23 @@ class PixelDrawingApp(QMainWindow):
         choose_btn.clicked.connect(self.choose_color)
         color_layout.addWidget(choose_btn)
         
-        # Recent colors
+        # Recent colors in compact grid
         recent_label = QLabel("Recent Colors:")
         recent_label.setFont(QFont("Arial", 8))
         color_layout.addWidget(recent_label)
         
         self.recent_buttons = []
-        recent_layout = QHBoxLayout()
+        recent_layout = QGridLayout()
+        recent_layout.setSpacing(2)  # Tight spacing for compact look
+        
+        # Arrange in 3x2 grid
         for i in range(AppConstants.RECENT_COLORS_COUNT):
             btn = ColorButton(self.recent_colors[i])
-            # Fix lambda closure bug by creating a proper closure with functools.partial
             btn.clicked.connect(partial(self._on_recent_color_clicked, i))
             self.recent_buttons.append(btn)
-            recent_layout.addWidget(btn)
+            row = i // 3
+            col = i % 3
+            recent_layout.addWidget(btn, row, col)
         
         color_layout.addLayout(recent_layout)
         
@@ -283,8 +316,8 @@ class PixelDrawingApp(QMainWindow):
         success = self.canvas.set_current_tool(tool_id)
         if success:
             # Update button states
-            self.brush_btn.setChecked(tool_id == "brush")
-            self.fill_btn.setChecked(tool_id == "fill")
+            for btn_id, btn in self.tool_buttons.items():
+                btn.setChecked(btn_id == tool_id)
     
     def set_color(self, color: QColor, add_to_recent: bool = False) -> None:
         """Set the current color and optionally update recent colors."""
@@ -296,6 +329,9 @@ class PixelDrawingApp(QMainWindow):
         self.current_color = color
         self.canvas.current_color = color
         self.color_display.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
+        # Update toolbar color display
+        if hasattr(self, 'toolbar_current_color'):
+            self.toolbar_current_color.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
     
     def _on_recent_color_clicked(self, index: int, checked: bool = False) -> None:
         """Handle recent color button clicks."""
@@ -425,6 +461,10 @@ class PixelDrawingApp(QMainWindow):
             self.recent_colors.insert(0, color)
             self.recent_colors = self.recent_colors[:AppConstants.RECENT_COLORS_COUNT]
             self.update_recent_colors()
+    
+    def _on_color_used(self, color: QColor) -> None:
+        """Handle color used on canvas (including from color picker)."""
+        self.set_color(color, add_to_recent=True)
     
     def _on_tool_changed(self, tool_id: str) -> None:
         """Handle tool changes."""

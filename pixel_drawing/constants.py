@@ -19,7 +19,8 @@ class AppConstants:
     MIN_WINDOW_WIDTH = 1000
     MIN_WINDOW_HEIGHT = 700
     SIDE_PANEL_WIDTH = 250
-    COLOR_BUTTON_SIZE = 24
+    COLOR_BUTTON_SIZE = 18  # Smaller for compact recent colors
+    SMALL_COLOR_BUTTON_SIZE = 16  # Even smaller for toolbar
     ICON_SIZE = 24
     COLOR_DISPLAY_WIDTH = 100
     COLOR_DISPLAY_HEIGHT = 30

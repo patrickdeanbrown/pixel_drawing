@@ -1,6 +1,7 @@
 """Tool manager for handling drawing tool selection and delegation."""
 
 from typing import Dict, Optional
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QColor
 
 from .base import DrawingTool
@@ -12,7 +13,7 @@ from .pan import PanTool
 from ...models import PixelArtModel
 
 
-class ToolManager:
+class ToolManager(QObject):
     """Manages available drawing tools and current tool selection.
     
     The ToolManager acts as a registry and coordinator for drawing tools,
@@ -20,12 +21,16 @@ class ToolManager:
     the current active tool state.
     """
     
+    # Signals
+    tool_changed = pyqtSignal(str)  # Emitted when active tool changes
+    
     def __init__(self, model: PixelArtModel):
         """Initialize tool manager.
         
         Args:
             model: PixelArtModel for tools to operate on
         """
+        super().__init__()
         self._model = model
         self._tools: Dict[str, DrawingTool] = {}
         self._current_tool: Optional[DrawingTool] = None
@@ -80,6 +85,7 @@ class ToolManager:
         tool = self.get_tool(tool_id)
         if tool:
             self._current_tool = tool
+            self.tool_changed.emit(tool_id)
             return True
         return False
     

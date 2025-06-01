@@ -9,6 +9,7 @@ from ..models import PixelArtModel
 from ..controllers.tools import ToolManager
 from ..constants import AppConstants
 from ..exceptions import ValidationError
+from ..utils.cursors import CursorManager
 
 
 class PixelCanvas(QWidget):
@@ -61,10 +62,19 @@ class PixelCanvas(QWidget):
         # Set up tool manager
         self._tool_manager = ToolManager(self._model)
         
+        # Set up cursor manager
+        self._cursor_manager = CursorManager()
+        
+        # Connect tool manager signals
+        self._tool_manager.tool_changed.connect(self._on_tool_changed)
+        
         # Connect model signals
         self._model.pixel_changed.connect(self._on_pixel_changed)
         self._model.canvas_resized.connect(self._on_canvas_resized)
         self._model.canvas_cleared.connect(self._on_canvas_cleared)
+        
+        # Connect tool signals
+        self._connect_tool_signals()
         
         # Update widget size
         self._update_widget_size()
@@ -164,6 +174,7 @@ class PixelCanvas(QWidget):
         success = self._tool_manager.set_current_tool(tool_id)
         if success:
             self.tool_changed.emit(tool_id)
+            self._update_cursor_for_tool(tool_id)
         return success
     
     def get_current_tool_id(self) -> Optional[str]:
@@ -241,3 +252,41 @@ class PixelCanvas(QWidget):
         except ValidationError as e:
             # Could emit an error signal here if needed
             pass
+    
+    def _on_tool_changed(self, tool_id: str) -> None:
+        """Handle tool changes from tool manager."""
+        self._update_cursor_for_tool(tool_id)
+        self.tool_changed.emit(tool_id)
+    
+    def _update_cursor_for_tool(self, tool_id: str) -> None:
+        """Update cursor based on current tool."""
+        current_tool = self._tool_manager.current_tool
+        if current_tool:
+            # Get tool's cursor (either custom or default)
+            cursor = current_tool.cursor
+            self.setCursor(cursor)
+    
+    def _connect_tool_signals(self) -> None:
+        """Connect signals from individual tools."""
+        # Color picker signal
+        color_picker = self._tool_manager.get_tool("picker")
+        if color_picker and hasattr(color_picker, 'signals'):
+            color_picker.signals.color_picked.connect(self._on_color_picked)
+        
+        # Pan tool signal
+        pan_tool = self._tool_manager.get_tool("pan")
+        if pan_tool and hasattr(pan_tool, 'signals'):
+            pan_tool.signals.pan_requested.connect(self._on_pan_requested)
+    
+    def _on_color_picked(self, color: QColor) -> None:
+        """Handle color picked from canvas."""
+        self.current_color = color
+        self.color_used.emit(color)
+    
+    def _on_pan_requested(self, delta_x: int, delta_y: int) -> None:
+        """Handle pan request from pan tool."""
+        # For now, we'll emit this as a signal for the parent to handle
+        # In a full implementation, this would interact with scroll areas
+        parent = self.parent()
+        if hasattr(parent, 'handle_pan_request'):
+            parent.handle_pan_request(delta_x, delta_y)

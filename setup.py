@@ -78,11 +78,10 @@ setup(
         "PyQt6>=6.4.0",
         "Pillow>=9.0.0",
     ],
-    py_modules=["pixel_drawing", "pixel_drawing_qt"],
+    packages=find_packages(),
     entry_points={
         "console_scripts": [
-            "pixel-drawing=pixel_drawing:main",
-            "pixel-drawing-qt=pixel_drawing_qt:main",
+            "pixel-drawing=pixel_drawing.app:main",
         ],
     },
     classifiers=[

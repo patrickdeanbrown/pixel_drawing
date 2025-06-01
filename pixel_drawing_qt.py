@@ -8,8 +8,9 @@ import sys
 import json
 import os
 import math
+from abc import ABC, abstractmethod
 from functools import partial
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 from PIL import Image
 
 from PyQt6.QtWidgets import (
@@ -17,7 +18,7 @@ from PyQt6.QtWidgets import (
     QLabel, QPushButton, QFrame, QGroupBox, QSpinBox, QFileDialog, QMessageBox,
     QColorDialog, QToolBar, QStatusBar, QSizePolicy
 )
-from PyQt6.QtCore import Qt, QPoint, QRect, QSize, pyqtSignal
+from PyQt6.QtCore import Qt, QPoint, QRect, QSize, pyqtSignal, QObject
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon, QAction, QFont
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtSvg import QSvgRenderer
@@ -124,100 +125,179 @@ def validate_file_path(file_path: str, operation: str = "access") -> None:
             raise FileOperationError(f"Directory is not writable: {directory}")
 
 
-class PixelCanvas(QWidget):
-    """Canvas widget for pixel art drawing with grid and zoom functionality."""
+class PixelArtModel(QObject):
+    """Data model for pixel art, managing canvas data and business logic."""
     
-    # Signals for decoupled communication
-    color_used = pyqtSignal(QColor)  # Emitted when a color is actually used on canvas
-    canvas_modified = pyqtSignal()  # Emitted when canvas content changes
+    # Signals for model changes
+    pixel_changed = pyqtSignal(int, int, QColor)  # x, y, new_color
+    canvas_resized = pyqtSignal(int, int)  # new_width, new_height
+    canvas_cleared = pyqtSignal()
+    model_loaded = pyqtSignal()
+    model_saved = pyqtSignal(str)  # file_path
     
-    def __init__(self, parent=None, width: int = AppConstants.DEFAULT_CANVAS_WIDTH, height: int = AppConstants.DEFAULT_CANVAS_HEIGHT, pixel_size: int = AppConstants.DEFAULT_PIXEL_SIZE):
-        super().__init__(parent)
-        self.grid_width = width
-        self.grid_height = height
-        self.pixel_size = pixel_size
-        self.current_color = QColor(AppConstants.DEFAULT_FG_COLOR)
-        self.current_tool = "brush"
+    def __init__(self, width: int = AppConstants.DEFAULT_CANVAS_WIDTH, 
+                 height: int = AppConstants.DEFAULT_CANVAS_HEIGHT):
+        """Initialize the pixel art model.
         
-        # Initialize pixel data
-        self.pixels = {}
-        for x in range(self.grid_width):
-            for y in range(self.grid_height):
-                self.pixels[(x, y)] = QColor(AppConstants.DEFAULT_BG_COLOR)
+        Args:
+            width: Canvas width in pixels
+            height: Canvas height in pixels
+        """
+        super().__init__()
+        validate_canvas_dimensions(width, height)
         
-        # Set widget size
-        canvas_width = self.grid_width * self.pixel_size
-        canvas_height = self.grid_height * self.pixel_size
-        self.setFixedSize(canvas_width, canvas_height)
+        self._width = width
+        self._height = height
+        self._pixels: Dict[Tuple[int, int], QColor] = {}
+        self._current_file: Optional[str] = None
+        self._is_modified = False
         
-        # Enable mouse tracking
-        self.setMouseTracking(True)
-        self.drawing = False
+        # Initialize with default background color
+        self.clear()
     
-    def paintEvent(self, event):
-        """Paint the pixel grid."""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+    @property
+    def width(self) -> int:
+        """Get canvas width."""
+        return self._width
+    
+    @property
+    def height(self) -> int:
+        """Get canvas height."""
+        return self._height
+    
+    @property
+    def current_file(self) -> Optional[str]:
+        """Get current file path."""
+        return self._current_file
+    
+    @property
+    def is_modified(self) -> bool:
+        """Check if model has unsaved changes."""
+        return self._is_modified
+    
+    def get_pixel(self, x: int, y: int) -> QColor:
+        """Get color of pixel at coordinates.
         
-        # Draw pixels
-        for (x, y), color in self.pixels.items():
-            x1 = x * self.pixel_size
-            y1 = y * self.pixel_size
+        Args:
+            x: X coordinate
+            y: Y coordinate
             
-            # Fill pixel
-            painter.fillRect(x1, y1, self.pixel_size, self.pixel_size, color)
+        Returns:
+            QColor at the specified coordinates
             
-            # Draw grid lines
-            painter.setPen(QPen(QColor(AppConstants.GRID_COLOR), 1))
-            painter.drawRect(x1, y1, self.pixel_size, self.pixel_size)
-    
-    def get_pixel_coords(self, pos: QPoint) -> Tuple[int, int]:
-        """Convert widget coordinates to pixel grid coordinates."""
-        pixel_x = pos.x() // self.pixel_size
-        pixel_y = pos.y() // self.pixel_size
-        return pixel_x, pixel_y
-    
-    def mousePressEvent(self, event):
-        """Handle mouse press events."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            pixel_x, pixel_y = self.get_pixel_coords(event.pos())
-            
-            if 0 <= pixel_x < self.grid_width and 0 <= pixel_y < self.grid_height:
-                if self.current_tool == "brush":
-                    self.paint_pixel(pixel_x, pixel_y)
-                    self.drawing = True
-                elif self.current_tool == "fill":
-                    self.fill_bucket(pixel_x, pixel_y)
-    
-    def mouseMoveEvent(self, event):
-        """Handle mouse move events for continuous drawing."""
-        if self.drawing and self.current_tool == "brush":
-            pixel_x, pixel_y = self.get_pixel_coords(event.pos())
-            if 0 <= pixel_x < self.grid_width and 0 <= pixel_y < self.grid_height:
-                self.paint_pixel(pixel_x, pixel_y)
-    
-    def mouseReleaseEvent(self, event):
-        """Handle mouse release events."""
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drawing = False
-    
-    def paint_pixel(self, x: int, y: int):
-        """Paint a single pixel with the current color."""
-        old_color = self.pixels.get((x, y))
-        self.pixels[(x, y)] = QColor(self.current_color)
-        self.update()  # Trigger repaint
+        Raises:
+            ValidationError: If coordinates are out of bounds
+        """
+        if not (0 <= x < self._width and 0 <= y < self._height):
+            raise ValidationError(f"Coordinates ({x}, {y}) out of bounds")
         
-        # Emit signals for decoupled communication
-        if old_color != self.current_color:
-            self.color_used.emit(self.current_color)
-            self.canvas_modified.emit()
+        return self._pixels.get((x, y), QColor(AppConstants.DEFAULT_BG_COLOR))
     
-    def fill_bucket(self, start_x: int, start_y: int):
-        """Fill connected pixels of the same color."""
-        target_color = self.pixels[(start_x, start_y)]
-        if target_color == self.current_color:
+    def set_pixel(self, x: int, y: int, color: QColor) -> bool:
+        """Set color of pixel at coordinates.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            color: Color to set
+            
+        Returns:
+            True if pixel was changed, False if it was already that color
+            
+        Raises:
+            ValidationError: If coordinates are out of bounds or color is invalid
+        """
+        if not (0 <= x < self._width and 0 <= y < self._height):
+            raise ValidationError(f"Coordinates ({x}, {y}) out of bounds")
+        
+        if not color.isValid():
+            raise ValidationError("Invalid color")
+        
+        old_color = self.get_pixel(x, y)
+        if old_color == color:
+            return False
+        
+        self._pixels[(x, y)] = QColor(color)
+        self._is_modified = True
+        self.pixel_changed.emit(x, y, color)
+        return True
+    
+    def get_all_pixels(self) -> Dict[Tuple[int, int], QColor]:
+        """Get all pixels as a dictionary.
+        
+        Returns:
+            Dictionary mapping coordinates to colors
+        """
+        return self._pixels.copy()
+    
+    def clear(self) -> None:
+        """Clear canvas to default background color."""
+        self._pixels.clear()
+        for x in range(self._width):
+            for y in range(self._height):
+                self._pixels[(x, y)] = QColor(AppConstants.DEFAULT_BG_COLOR)
+        
+        self._is_modified = True
+        self.canvas_cleared.emit()
+    
+    def resize(self, new_width: int, new_height: int) -> None:
+        """Resize canvas, preserving existing pixels.
+        
+        Args:
+            new_width: New canvas width
+            new_height: New canvas height
+            
+        Raises:
+            ValidationError: If dimensions are invalid
+        """
+        validate_canvas_dimensions(new_width, new_height)
+        
+        if new_width == self._width and new_height == self._height:
             return
         
+        new_pixels = {}
+        default_color = QColor(AppConstants.DEFAULT_BG_COLOR)
+        
+        # Copy existing pixels and fill new areas
+        for x in range(new_width):
+            for y in range(new_height):
+                if x < self._width and y < self._height:
+                    new_pixels[(x, y)] = self.get_pixel(x, y)
+                else:
+                    new_pixels[(x, y)] = default_color
+        
+        self._width = new_width
+        self._height = new_height
+        self._pixels = new_pixels
+        self._is_modified = True
+        
+        self.canvas_resized.emit(new_width, new_height)
+    
+    def flood_fill(self, start_x: int, start_y: int, new_color: QColor) -> List[Tuple[int, int]]:
+        """Perform flood fill starting from given coordinates.
+        
+        Args:
+            start_x: Starting X coordinate
+            start_y: Starting Y coordinate
+            new_color: Color to fill with
+            
+        Returns:
+            List of coordinates that were changed
+            
+        Raises:
+            ValidationError: If coordinates are out of bounds or color is invalid
+        """
+        if not (0 <= start_x < self._width and 0 <= start_y < self._height):
+            raise ValidationError(f"Start coordinates ({start_x}, {start_y}) out of bounds")
+        
+        if not new_color.isValid():
+            raise ValidationError("Invalid fill color")
+        
+        target_color = self.get_pixel(start_x, start_y)
+        if target_color == new_color:
+            return []
+        
+        changed_pixels = []
         stack = [(start_x, start_y)]
         visited = set()
         
@@ -225,53 +305,611 @@ class PixelCanvas(QWidget):
             x, y = stack.pop()
             if (x, y) in visited:
                 continue
-            if x < 0 or x >= self.grid_width or y < 0 or y >= self.grid_height:
+            if not (0 <= x < self._width and 0 <= y < self._height):
                 continue
-            if self.pixels[(x, y)] != target_color:
+            if self.get_pixel(x, y) != target_color:
                 continue
             
             visited.add((x, y))
-            self.pixels[(x, y)] = QColor(self.current_color)
+            self._pixels[(x, y)] = QColor(new_color)
+            changed_pixels.append((x, y))
             
-            # Add neighboring pixels to stack
+            # Add neighboring pixels
             stack.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
         
-        self.update()
+        if changed_pixels:
+            self._is_modified = True
+            # Emit signal for each changed pixel
+            for x, y in changed_pixels:
+                self.pixel_changed.emit(x, y, new_color)
         
-        # Emit signals for decoupled communication  
-        self.color_used.emit(self.current_color)
-        self.canvas_modified.emit()
+        return changed_pixels
     
+    def load_from_dict(self, data: Dict) -> None:
+        """Load model from dictionary data.
+        
+        Args:
+            data: Dictionary containing width, height, and pixels
+            
+        Raises:
+            ValidationError: If data format is invalid
+        """
+        # Validate data structure
+        required_fields = ["width", "height", "pixels"]
+        for field in required_fields:
+            if field not in data:
+                raise ValidationError(f"Missing required field: {field}")
+        
+        width, height = data["width"], data["height"]
+        validate_canvas_dimensions(width, height)
+        
+        if not isinstance(data["pixels"], dict):
+            raise ValidationError("Pixels data must be a dictionary")
+        
+        # Parse and validate pixel data
+        new_pixels = {}
+        for coord_str, color_str in data["pixels"].items():
+            try:
+                x, y = map(int, coord_str.split(','))
+                if not (0 <= x < width and 0 <= y < height):
+                    raise ValueError(f"Pixel coordinate out of bounds: ({x}, {y})")
+                
+                color = QColor(color_str)
+                if not color.isValid():
+                    raise ValueError(f"Invalid color: {color_str}")
+                
+                new_pixels[(x, y)] = color
+            except ValueError as e:
+                raise ValidationError(f"Invalid pixel data: {e}")
+        
+        # Apply loaded data
+        self._width = width
+        self._height = height
+        self._pixels = new_pixels
+        self._is_modified = False
+        
+        self.model_loaded.emit()
+    
+    def to_dict(self) -> Dict:
+        """Convert model to dictionary for serialization.
+        
+        Returns:
+            Dictionary containing width, height, and pixels
+        """
+        return {
+            "width": self._width,
+            "height": self._height,
+            "pixels": {f"{x},{y}": color.name() for (x, y), color in self._pixels.items()}
+        }
+    
+    def set_current_file(self, file_path: Optional[str]) -> None:
+        """Set the current file path.
+        
+        Args:
+            file_path: Path to current file, or None if no file
+        """
+        self._current_file = file_path
+        if file_path:
+            self._is_modified = False
+            self.model_saved.emit(file_path)
+
+
+class DrawingTool(ABC):
+    """Abstract base class for drawing tools."""
+    
+    def __init__(self, name: str, model: PixelArtModel):
+        """Initialize drawing tool.
+        
+        Args:
+            name: Tool name for display
+            model: PixelArtModel to operate on
+        """
+        self._name = name
+        self._model = model
+    
+    @property
+    def name(self) -> str:
+        """Get tool name."""
+        return self._name
+    
+    @abstractmethod
+    def on_press(self, x: int, y: int, color: QColor) -> bool:
+        """Handle mouse press event.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            color: Current drawing color
+            
+        Returns:
+            True if tool should continue receiving move events
+        """
+        pass
+    
+    @abstractmethod
+    def on_move(self, x: int, y: int, color: QColor) -> None:
+        """Handle mouse move event.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            color: Current drawing color
+        """
+        pass
+    
+    @abstractmethod
+    def on_release(self, x: int, y: int, color: QColor) -> None:
+        """Handle mouse release event.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            color: Current drawing color
+        """
+        pass
+
+
+class BrushTool(DrawingTool):
+    """Brush tool for painting individual pixels."""
+    
+    def __init__(self, model: PixelArtModel):
+        """Initialize brush tool."""
+        super().__init__("Brush", model)
+        self._is_drawing = False
+    
+    def on_press(self, x: int, y: int, color: QColor) -> bool:
+        """Start brush stroke."""
+        try:
+            self._model.set_pixel(x, y, color)
+            self._is_drawing = True
+            return True  # Continue receiving move events
+        except ValidationError:
+            return False
+    
+    def on_move(self, x: int, y: int, color: QColor) -> None:
+        """Continue brush stroke."""
+        if self._is_drawing:
+            try:
+                self._model.set_pixel(x, y, color)
+            except ValidationError:
+                pass  # Ignore out-of-bounds moves
+    
+    def on_release(self, x: int, y: int, color: QColor) -> None:
+        """End brush stroke."""
+        self._is_drawing = False
+
+
+class FillTool(DrawingTool):
+    """Fill bucket tool for flood fill operations."""
+    
+    def __init__(self, model: PixelArtModel):
+        """Initialize fill tool."""
+        super().__init__("Fill Bucket", model)
+    
+    def on_press(self, x: int, y: int, color: QColor) -> bool:
+        """Perform flood fill."""
+        try:
+            changed_pixels = self._model.flood_fill(x, y, color)
+            return False  # No move events needed for fill
+        except ValidationError:
+            return False
+    
+    def on_move(self, x: int, y: int, color: QColor) -> None:
+        """Fill tool doesn't use move events."""
+        pass
+    
+    def on_release(self, x: int, y: int, color: QColor) -> None:
+        """Fill tool doesn't use release events."""
+        pass
+
+
+class ToolManager:
+    """Manages available drawing tools and current tool selection."""
+    
+    def __init__(self, model: PixelArtModel):
+        """Initialize tool manager.
+        
+        Args:
+            model: PixelArtModel for tools to operate on
+        """
+        self._model = model
+        self._tools: Dict[str, DrawingTool] = {}
+        self._current_tool: Optional[DrawingTool] = None
+        
+        # Register default tools
+        self.register_tool("brush", BrushTool(model))
+        self.register_tool("fill", FillTool(model))
+        
+        # Set default tool
+        self.set_current_tool("brush")
+    
+    def register_tool(self, tool_id: str, tool: DrawingTool) -> None:
+        """Register a new tool.
+        
+        Args:
+            tool_id: Unique identifier for the tool
+            tool: DrawingTool instance
+        """
+        self._tools[tool_id] = tool
+    
+    def get_tool(self, tool_id: str) -> Optional[DrawingTool]:
+        """Get tool by ID.
+        
+        Args:
+            tool_id: Tool identifier
+            
+        Returns:
+            DrawingTool instance or None if not found
+        """
+        return self._tools.get(tool_id)
+    
+    def get_available_tools(self) -> Dict[str, str]:
+        """Get available tools.
+        
+        Returns:
+            Dictionary mapping tool IDs to tool names
+        """
+        return {tool_id: tool.name for tool_id, tool in self._tools.items()}
+    
+    def set_current_tool(self, tool_id: str) -> bool:
+        """Set the current active tool.
+        
+        Args:
+            tool_id: Tool identifier
+            
+        Returns:
+            True if tool was set successfully
+        """
+        tool = self.get_tool(tool_id)
+        if tool:
+            self._current_tool = tool
+            return True
+        return False
+    
+    @property
+    def current_tool(self) -> Optional[DrawingTool]:
+        """Get current active tool."""
+        return self._current_tool
+    
+    def handle_press(self, x: int, y: int, color: QColor) -> bool:
+        """Handle mouse press with current tool.
+        
+        Args:
+            x: X coordinate
+            y: Y coordinate
+            color: Current drawing color
+            
+        Returns:
+            True if tool should receive move events
+        """
+        if self._current_tool:
+            return self._current_tool.on_press(x, y, color)
+        return False
+    
+    def handle_move(self, x: int, y: int, color: QColor) -> None:
+        """Handle mouse move with current tool."""
+        if self._current_tool:
+            self._current_tool.on_move(x, y, color)
+    
+    def handle_release(self, x: int, y: int, color: QColor) -> None:
+        """Handle mouse release with current tool."""
+        if self._current_tool:
+            self._current_tool.on_release(x, y, color)
+
+
+class PixelCanvas(QWidget):
+    """Canvas widget for pixel art drawing with grid and zoom functionality."""
+    
+    # Signals for decoupled communication
+    color_used = pyqtSignal(QColor)  # Emitted when a color is actually used on canvas
+    tool_changed = pyqtSignal(str)  # Emitted when drawing tool changes
+    pixel_hovered = pyqtSignal(int, int)  # Emitted when mouse hovers over pixel
+    
+    def __init__(self, parent=None, model: Optional[PixelArtModel] = None, pixel_size: int = AppConstants.DEFAULT_PIXEL_SIZE):
+        """Initialize pixel canvas.
+        
+        Args:
+            parent: Parent widget
+            model: PixelArtModel to display and edit
+            pixel_size: Size of each pixel in screen pixels
+        """
+        super().__init__(parent)
+        self.pixel_size = pixel_size
+        self.current_color = QColor(AppConstants.DEFAULT_FG_COLOR)
+        self._is_drawing = False
+        
+        # Set up model
+        if model is None:
+            model = PixelArtModel()
+        self._model = model
+        
+        # Set up tool manager
+        self._tool_manager = ToolManager(self._model)
+        
+        # Connect model signals
+        self._model.pixel_changed.connect(self._on_pixel_changed)
+        self._model.canvas_resized.connect(self._on_canvas_resized)
+        self._model.canvas_cleared.connect(self._on_canvas_cleared)
+        
+        # Update widget size
+        self._update_widget_size()
+        
+        # Enable mouse tracking
+        self.setMouseTracking(True)
+    
+    @property
+    def model(self) -> PixelArtModel:
+        """Get the underlying model."""
+        return self._model
+    
+    @property 
+    def tool_manager(self) -> ToolManager:
+        """Get the tool manager."""
+        return self._tool_manager
+    
+    def _update_widget_size(self) -> None:
+        """Update widget size based on model dimensions."""
+        canvas_width = self._model.width * self.pixel_size
+        canvas_height = self._model.height * self.pixel_size
+        self.setFixedSize(canvas_width, canvas_height)
+    
+    def _on_pixel_changed(self, x: int, y: int, color: QColor) -> None:
+        """Handle pixel changes from model."""
+        # Update only the changed pixel region
+        pixel_rect = QRect(x * self.pixel_size, y * self.pixel_size, 
+                          self.pixel_size, self.pixel_size)
+        self.update(pixel_rect)
+        
+        # Emit signal for color usage tracking
+        self.color_used.emit(color)
+    
+    def _on_canvas_resized(self, new_width: int, new_height: int) -> None:
+        """Handle canvas resize from model."""
+        self._update_widget_size()
+        self.update()
+    
+    def _on_canvas_cleared(self) -> None:
+        """Handle canvas clear from model."""
+        self.update()
+    
+    def paintEvent(self, event):
+        """Paint the pixel grid."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        
+        # Get update region to optimize drawing
+        update_rect = event.rect()
+        
+        # Calculate which pixels need to be drawn
+        start_x = max(0, update_rect.left() // self.pixel_size)
+        start_y = max(0, update_rect.top() // self.pixel_size)
+        end_x = min(self._model.width, (update_rect.right() // self.pixel_size) + 1)
+        end_y = min(self._model.height, (update_rect.bottom() // self.pixel_size) + 1)
+        
+        # Draw only the pixels in the update region
+        for x in range(start_x, end_x):
+            for y in range(start_y, end_y):
+                color = self._model.get_pixel(x, y)
+                x1 = x * self.pixel_size
+                y1 = y * self.pixel_size
+                
+                # Fill pixel
+                painter.fillRect(x1, y1, self.pixel_size, self.pixel_size, color)
+                
+                # Draw grid lines
+                painter.setPen(QPen(QColor(AppConstants.GRID_COLOR), 1))
+                painter.drawRect(x1, y1, self.pixel_size, self.pixel_size)
+    
+    def get_pixel_coords(self, pos: QPoint) -> Tuple[int, int]:
+        """Convert widget coordinates to pixel grid coordinates."""
+        pixel_x = pos.x() // self.pixel_size
+        pixel_y = pos.y() // self.pixel_size
+        return pixel_x, pixel_y
+    
+    def set_current_tool(self, tool_id: str) -> bool:
+        """Set the current drawing tool.
+        
+        Args:
+            tool_id: Tool identifier
+            
+        Returns:
+            True if tool was set successfully
+        """
+        success = self._tool_manager.set_current_tool(tool_id)
+        if success:
+            self.tool_changed.emit(tool_id)
+        return success
+    
+    def get_current_tool_id(self) -> Optional[str]:
+        """Get current tool ID."""
+        current_tool = self._tool_manager.current_tool
+        if current_tool:
+            # Find tool ID by comparing tool instances
+            for tool_id, tool in self._tool_manager._tools.items():
+                if tool is current_tool:
+                    return tool_id
+        return None
+    
+    def mousePressEvent(self, event):
+        """Handle mouse press events."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            pixel_x, pixel_y = self.get_pixel_coords(event.pos())
+            
+            if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
+                self._is_drawing = self._tool_manager.handle_press(pixel_x, pixel_y, self.current_color)
+    
+    def mouseMoveEvent(self, event):
+        """Handle mouse move events for continuous drawing and hover."""
+        pixel_x, pixel_y = self.get_pixel_coords(event.pos())
+        
+        # Emit hover signal for status updates
+        if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
+            self.pixel_hovered.emit(pixel_x, pixel_y)
+        
+        # Handle drawing
+        if self._is_drawing:
+            if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
+                self._tool_manager.handle_move(pixel_x, pixel_y, self.current_color)
+    
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release events."""
+        if event.button() == Qt.MouseButton.LeftButton and self._is_drawing:
+            pixel_x, pixel_y = self.get_pixel_coords(event.pos())
+            if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
+                self._tool_manager.handle_release(pixel_x, pixel_y, self.current_color)
+            self._is_drawing = False
+    
+    # Legacy methods for compatibility - delegate to model
     def clear_canvas(self):
         """Clear all pixels to white."""
-        for key in self.pixels:
-            self.pixels[key] = QColor(AppConstants.DEFAULT_BG_COLOR)
-        self.update()
-        self.canvas_modified.emit()
+        self._model.clear()
     
     def resize_canvas(self, new_width: int, new_height: int):
         """Resize the canvas while preserving existing pixels."""
-        new_pixels = {}
+        try:
+            self._model.resize(new_width, new_height)
+        except ValidationError as e:
+            # Could emit an error signal here if needed
+            pass
+
+
+class FileService(QObject):
+    """Service class for file I/O operations."""
+    
+    # Signals for file operations
+    file_loaded = pyqtSignal(str)  # file_path
+    file_saved = pyqtSignal(str)   # file_path
+    file_exported = pyqtSignal(str)  # file_path
+    operation_failed = pyqtSignal(str, str)  # operation, error_message
+    
+    def __init__(self):
+        """Initialize file service."""
+        super().__init__()
+    
+    def load_file(self, file_path: str, model: PixelArtModel) -> bool:
+        """Load a pixel art file into the model.
         
-        # Copy existing pixels and fill new areas with white
-        for x in range(new_width):
-            for y in range(new_height):
-                if x < self.grid_width and y < self.grid_height:
-                    new_pixels[(x, y)] = self.pixels.get((x, y), QColor(AppConstants.DEFAULT_BG_COLOR))
+        Args:
+            file_path: Path to the file to load
+            model: PixelArtModel to load data into
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Validate file path
+            validate_file_path(file_path, "read")
+            
+            # Load and validate JSON data
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Load data into model
+            model.load_from_dict(data)
+            model.set_current_file(file_path)
+            
+            self.file_loaded.emit(file_path)
+            return True
+            
+        except (FileOperationError, ValidationError, json.JSONDecodeError) as e:
+            self.operation_failed.emit("load", str(e))
+            return False
+        except Exception as e:
+            self.operation_failed.emit("load", f"Unexpected error: {str(e)}")
+            return False
+    
+    def save_file(self, file_path: str, model: PixelArtModel) -> bool:
+        """Save model data to a file.
+        
+        Args:
+            file_path: Path to save the file to
+            model: PixelArtModel to save data from
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Validate file path for writing
+            validate_file_path(file_path, "write")
+            
+            # Get data from model
+            data = model.to_dict()
+            
+            # Write to temporary file first for safety
+            temp_path = file_path + ".tmp"
+            try:
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                
+                # Atomic move from temp to final location
+                if os.path.exists(file_path):
+                    backup_path = file_path + ".bak"
+                    os.rename(file_path, backup_path)
+                    try:
+                        os.rename(temp_path, file_path)
+                        os.remove(backup_path)  # Remove backup on success
+                    except Exception:
+                        os.rename(backup_path, file_path)  # Restore backup on failure
+                        raise
                 else:
-                    new_pixels[(x, y)] = QColor(AppConstants.DEFAULT_BG_COLOR)
+                    os.rename(temp_path, file_path)
+                
+                model.set_current_file(file_path)
+                self.file_saved.emit(file_path)
+                return True
+                
+            finally:
+                # Clean up temp file if it still exists
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                    
+        except (FileOperationError, ValidationError) as e:
+            self.operation_failed.emit("save", str(e))
+            return False
+        except Exception as e:
+            self.operation_failed.emit("save", f"Failed to save file: {str(e)}")
+            return False
+    
+    def export_png(self, file_path: str, model: PixelArtModel) -> bool:
+        """Export model as PNG image.
         
-        self.grid_width = new_width
-        self.grid_height = new_height
-        self.pixels = new_pixels
-        
-        # Resize the widget
-        canvas_width = self.grid_width * self.pixel_size
-        canvas_height = self.grid_height * self.pixel_size
-        self.setFixedSize(canvas_width, canvas_height)
-        
-        self.update()
-        self.canvas_modified.emit()
+        Args:
+            file_path: Path to save the PNG file
+            model: PixelArtModel to export
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Validate file path for writing
+            validate_file_path(file_path, "write")
+            
+            # Ensure .png extension
+            if not file_path.lower().endswith('.png'):
+                file_path += '.png'
+            
+            # Create PIL image
+            img = Image.new("RGB", (model.width, model.height), "white")
+            
+            # Set pixels
+            for x in range(model.width):
+                for y in range(model.height):
+                    color = model.get_pixel(x, y)
+                    rgb = color.getRgb()[:3]  # Get RGB values
+                    img.putpixel((x, y), rgb)
+            
+            # Save image
+            img.save(file_path, "PNG", optimize=True)
+            
+            self.file_exported.emit(file_path)
+            return True
+            
+        except (FileOperationError, ValidationError) as e:
+            self.operation_failed.emit("export", str(e))
+            return False
+        except Exception as e:
+            self.operation_failed.emit("export", f"Failed to export PNG: {str(e)}")
+            return False
 
 
 class ColorButton(QPushButton):
@@ -308,10 +946,19 @@ class PixelDrawingApp(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.current_file = None
+        
+        # Initialize core components
+        self._model = PixelArtModel()
+        self._file_service = FileService()
+        
+        # UI state
         self.current_color = QColor(AppConstants.DEFAULT_FG_COLOR)
         self.recent_colors = [QColor(AppConstants.DEFAULT_BG_COLOR)] * AppConstants.RECENT_COLORS_COUNT
         
+        # Set up connections
+        self._setup_connections()
+        
+        # Set up UI
         self.setup_ui()
         self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
         self.setMinimumSize(AppConstants.MIN_WINDOW_WIDTH, AppConstants.MIN_WINDOW_HEIGHT)
@@ -349,6 +996,18 @@ class PixelDrawingApp(QMainWindow):
             }
         """)
     
+    def _setup_connections(self) -> None:
+        """Set up signal/slot connections between components."""
+        # Model signals
+        self._model.model_loaded.connect(self._on_model_loaded)
+        self._model.model_saved.connect(self._on_model_saved)
+        
+        # File service signals
+        self._file_service.file_loaded.connect(self._on_file_loaded)
+        self._file_service.file_saved.connect(self._on_file_saved)
+        self._file_service.file_exported.connect(self._on_file_exported)
+        self._file_service.operation_failed.connect(self._on_file_operation_failed)
+    
     def setup_ui(self):
         """Set up the user interface."""
         central_widget = QWidget()
@@ -362,10 +1021,11 @@ class PixelDrawingApp(QMainWindow):
         canvas_frame.setFrameStyle(QFrame.Shape.StyledPanel)
         canvas_layout = QVBoxLayout(canvas_frame)
         
-        self.canvas = PixelCanvas(self, AppConstants.DEFAULT_CANVAS_WIDTH, AppConstants.DEFAULT_CANVAS_HEIGHT, AppConstants.DEFAULT_PIXEL_SIZE)
+        self.canvas = PixelCanvas(self, self._model, AppConstants.DEFAULT_PIXEL_SIZE)
         # Connect canvas signals for decoupled communication
         self.canvas.color_used.connect(self._on_color_used)
-        self.canvas.canvas_modified.connect(self._on_canvas_modified)
+        self.canvas.tool_changed.connect(self._on_tool_changed)
+        self.canvas.pixel_hovered.connect(self._on_pixel_hovered)
         canvas_layout.addWidget(self.canvas, alignment=Qt.AlignmentFlag.AlignCenter)
         
         main_layout.addWidget(canvas_frame, 1)
@@ -512,13 +1172,13 @@ class PixelDrawingApp(QMainWindow):
         
         parent_layout.addWidget(color_group)
     
-    def set_tool(self, tool):
+    def set_tool(self, tool_id: str) -> None:
         """Set the current drawing tool."""
-        self.canvas.current_tool = tool
-        
-        # Update button states
-        self.brush_btn.setChecked(tool == "brush")
-        self.fill_btn.setChecked(tool == "fill")
+        success = self.canvas.set_current_tool(tool_id)
+        if success:
+            # Update button states
+            self.brush_btn.setChecked(tool_id == "brush")
+            self.fill_btn.setChecked(tool_id == "fill")
     
     def set_color(self, color: QColor, add_to_recent: bool = False):
         """Set the current color and optionally update recent colors."""
@@ -552,82 +1212,40 @@ class PixelDrawingApp(QMainWindow):
     
     def new_file(self):
         """Create a new file."""
-        reply = QMessageBox.question(self, "New File", "Are you sure? Unsaved changes will be lost.")
-        if reply == QMessageBox.StandardButton.Yes:
-            self.canvas.clear_canvas()
-            self.current_file = None
-            self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
+        if self._model.is_modified:
+            reply = QMessageBox.question(self, "New File", "Are you sure? Unsaved changes will be lost.")
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        
+        # Create new model
+        self._model = PixelArtModel()
+        self.canvas._model = self._model
+        self.canvas._tool_manager = ToolManager(self._model)
+        
+        # Reconnect signals
+        self._model.model_loaded.connect(self._on_model_loaded)
+        self._model.model_saved.connect(self._on_model_saved)
+        
+        # Update canvas
+        self.canvas._update_widget_size()
+        self.canvas.update()
+        
+        # Update UI
+        self.width_spin.setValue(self._model.width)
+        self.height_spin.setValue(self._model.height)
+        self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
     
     def open_file(self):
         """Open a pixel art file."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
         
-        if not file_path:
-            return
-            
-        try:
-            # Validate file path
-            validate_file_path(file_path, "read")
-            
-            # Load and validate JSON data
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            # Validate required fields
-            required_fields = ["width", "height", "pixels"]
-            for field in required_fields:
-                if field not in data:
-                    raise FileOperationError(f"Invalid file format: missing '{field}' field")
-            
-            # Validate canvas dimensions
-            width, height = data["width"], data["height"]
-            validate_canvas_dimensions(width, height)
-            
-            # Validate pixels data
-            if not isinstance(data["pixels"], dict):
-                raise FileOperationError("Invalid file format: 'pixels' must be a dictionary")
-            
-            # Parse pixel data
-            pixels = {}
-            for coord_str, color_str in data["pixels"].items():
-                try:
-                    x, y = map(int, coord_str.split(','))
-                    if not (0 <= x < width and 0 <= y < height):
-                        raise ValueError(f"Pixel coordinate out of bounds: ({x}, {y})")
-                    pixels[(x, y)] = QColor(color_str)
-                    if not pixels[(x, y)].isValid():
-                        raise ValueError(f"Invalid color: {color_str}")
-                except ValueError as e:
-                    raise FileOperationError(f"Invalid pixel data: {e}")
-            
-            # Apply loaded data
-            self.canvas.grid_width = width
-            self.canvas.grid_height = height
-            self.canvas.pixels = pixels
-            
-            # Update UI
-            self.width_spin.setValue(width)
-            self.height_spin.setValue(height)
-            
-            # Resize canvas widget
-            canvas_width = self.canvas.grid_width * self.canvas.pixel_size
-            canvas_height = self.canvas.grid_height * self.canvas.pixel_size
-            self.canvas.setFixedSize(canvas_width, canvas_height)
-            
-            self.canvas.update()
-            self.current_file = file_path
-            self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
-            self.statusBar().showMessage(f"Opened: {os.path.basename(file_path)}")
-            
-        except (FileOperationError, ValidationError, json.JSONDecodeError) as e:
-            QMessageBox.critical(self, "File Error", str(e))
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Unexpected error opening file: {str(e)}")
+        if file_path:
+            self._file_service.load_file(file_path, self._model)
     
     def save_file(self):
         """Save the current pixel art."""
-        if self.current_file:
-            self._save_to_file(self.current_file)
+        if self._model.current_file:
+            self._file_service.save_file(self._model.current_file, self._model)
         else:
             self.save_as_file()
     
@@ -636,96 +1254,14 @@ class PixelDrawingApp(QMainWindow):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
         
         if file_path:
-            self._save_to_file(file_path)
-            self.current_file = file_path
-            self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
-    
-    def _save_to_file(self, file_path: str):
-        """Save pixel data to file.
-        
-        Args:
-            file_path: Path to save the file to
-            
-        Raises:
-            FileOperationError: If file cannot be saved
-        """
-        try:
-            # Validate file path for writing
-            validate_file_path(file_path, "write")
-            
-            # Prepare data
-            data = {
-                "width": self.canvas.grid_width,
-                "height": self.canvas.grid_height,
-                "pixels": {f"{x},{y}": color.name() for (x, y), color in self.canvas.pixels.items()}
-            }
-            
-            # Write to temporary file first for safety
-            temp_path = file_path + ".tmp"
-            try:
-                with open(temp_path, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=2, ensure_ascii=False)
-                
-                # Atomic move from temp to final location
-                if os.path.exists(file_path):
-                    backup_path = file_path + ".bak"
-                    os.rename(file_path, backup_path)
-                    try:
-                        os.rename(temp_path, file_path)
-                        os.remove(backup_path)  # Remove backup on success
-                    except Exception:
-                        os.rename(backup_path, file_path)  # Restore backup on failure
-                        raise
-                else:
-                    os.rename(temp_path, file_path)
-                
-                self.statusBar().showMessage(f"Saved: {os.path.basename(file_path)}")
-                QMessageBox.information(self, "Success", "File saved successfully!")
-                
-            finally:
-                # Clean up temp file if it still exists
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                    
-        except (FileOperationError, ValidationError) as e:
-            QMessageBox.critical(self, "File Error", str(e))
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to save file: {str(e)}")
+            self._file_service.save_file(file_path, self._model)
     
     def export_png(self):
         """Export as PNG image."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Export as PNG", "", AppConstants.PNG_FILE_FILTER)
         
-        if not file_path:
-            return
-            
-        try:
-            # Validate file path for writing
-            validate_file_path(file_path, "write")
-            
-            # Ensure .png extension
-            if not file_path.lower().endswith('.png'):
-                file_path += '.png'
-            
-            # Create PIL image
-            img = Image.new("RGB", (self.canvas.grid_width, self.canvas.grid_height), "white")
-            
-            # Set pixels
-            for (x, y), color in self.canvas.pixels.items():
-                if 0 <= x < self.canvas.grid_width and 0 <= y < self.canvas.grid_height:
-                    rgb = color.getRgb()[:3]  # Get RGB values
-                    img.putpixel((x, y), rgb)
-            
-            # Save image
-            img.save(file_path, "PNG", optimize=True)
-            
-            self.statusBar().showMessage(f"Exported: {os.path.basename(file_path)}")
-            QMessageBox.information(self, "Success", "PNG exported successfully!")
-            
-        except (FileOperationError, ValidationError) as e:
-            QMessageBox.critical(self, "Export Error", str(e))
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export PNG: {str(e)}")
+        if file_path:
+            self._file_service.export_png(file_path, self._model)
     
     def create_svg_icon(self, svg_path: str) -> QIcon:
         """Create a QIcon from an SVG file."""
@@ -748,9 +1284,6 @@ class PixelDrawingApp(QMainWindow):
         new_height = self.height_spin.value()
         
         try:
-            # Validate dimensions
-            validate_canvas_dimensions(new_width, new_height)
-            
             # Warn about large canvases
             if new_width > AppConstants.LARGE_CANVAS_THRESHOLD or new_height > AppConstants.LARGE_CANVAS_THRESHOLD:
                 reply = QMessageBox.question(
@@ -763,34 +1296,67 @@ class PixelDrawingApp(QMainWindow):
                 if reply != QMessageBox.StandardButton.Yes:
                     return
             
-            # Perform resize
-            self.canvas.resize_canvas(new_width, new_height)
+            # Perform resize through model
+            self._model.resize(new_width, new_height)
             self.statusBar().showMessage(f"Canvas resized to {new_width}x{new_height}")
             
         except ValidationError as e:
             QMessageBox.warning(self, "Invalid Dimensions", str(e))
             # Reset spinboxes to current canvas size
-            self.width_spin.setValue(self.canvas.grid_width)
-            self.height_spin.setValue(self.canvas.grid_height)
+            self.width_spin.setValue(self._model.width)
+            self.height_spin.setValue(self._model.height)
     
     def clear_canvas(self):
         """Clear the canvas."""
         reply = QMessageBox.question(self, "Clear Canvas", "Are you sure you want to clear the canvas?")
         if reply == QMessageBox.StandardButton.Yes:
-            self.canvas.clear_canvas()
+            self._model.clear()
     
+    # Signal handlers
     def _on_color_used(self, color: QColor) -> None:
-        """Handle color usage on canvas (slot for canvas.color_used signal)."""
+        """Handle color usage on canvas."""
         if color != self.current_color and color not in self.recent_colors:
             self.recent_colors.insert(0, color)
             self.recent_colors = self.recent_colors[:AppConstants.RECENT_COLORS_COUNT]
             self.update_recent_colors()
     
-    def _on_canvas_modified(self) -> None:
-        """Handle canvas modifications (slot for canvas.canvas_modified signal)."""
-        # Mark document as modified (could be used for save state tracking)
-        # For now, just update status bar
-        self.statusBar().showMessage("Canvas modified")
+    def _on_tool_changed(self, tool_id: str) -> None:
+        """Handle tool changes."""
+        self.statusBar().showMessage(f"Tool: {tool_id}")
+    
+    def _on_pixel_hovered(self, x: int, y: int) -> None:
+        """Handle pixel hover events."""
+        color = self._model.get_pixel(x, y)
+        self.statusBar().showMessage(f"Pixel ({x}, {y}): {color.name()}")
+    
+    def _on_model_loaded(self) -> None:
+        """Handle model loaded."""
+        # Update UI to reflect loaded model
+        self.width_spin.setValue(self._model.width)
+        self.height_spin.setValue(self._model.height)
+    
+    def _on_model_saved(self, file_path: str) -> None:
+        """Handle model saved."""
+        self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
+    
+    def _on_file_loaded(self, file_path: str) -> None:
+        """Handle file loaded successfully."""
+        self.statusBar().showMessage(f"Opened: {os.path.basename(file_path)}")
+        self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
+    
+    def _on_file_saved(self, file_path: str) -> None:
+        """Handle file saved successfully."""
+        self.statusBar().showMessage(f"Saved: {os.path.basename(file_path)}")
+        QMessageBox.information(self, "Success", "File saved successfully!")
+    
+    def _on_file_exported(self, file_path: str) -> None:
+        """Handle file exported successfully."""
+        self.statusBar().showMessage(f"Exported: {os.path.basename(file_path)}")
+        QMessageBox.information(self, "Success", "PNG exported successfully!")
+    
+    def _on_file_operation_failed(self, operation: str, error_message: str) -> None:
+        """Handle file operation failures."""
+        QMessageBox.critical(self, f"{operation.title()} Error", error_message)
 
 
 def main():

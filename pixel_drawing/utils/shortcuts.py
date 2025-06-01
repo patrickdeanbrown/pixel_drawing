@@ -3,6 +3,8 @@
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QMainWindow
 
+from ..enums import ToolType
+
 
 def setup_keyboard_shortcuts(window: QMainWindow) -> None:
     """Set up keyboard shortcuts for common actions.
@@ -21,12 +23,12 @@ def setup_keyboard_shortcuts(window: QMainWindow) -> None:
     QShortcut(QKeySequence("Ctrl+Shift+S"), window, window.save_as_file)
     QShortcut(QKeySequence("Ctrl+E"), window, window.export_png)
     
-    # Tool shortcuts  
-    QShortcut(QKeySequence("B"), window, lambda: window.set_tool("brush"))
-    QShortcut(QKeySequence("F"), window, lambda: window.set_tool("fill"))
-    QShortcut(QKeySequence("E"), window, lambda: window.set_tool("eraser"))
-    QShortcut(QKeySequence("I"), window, lambda: window.set_tool("picker"))
-    QShortcut(QKeySequence("H"), window, lambda: window.set_tool("pan"))
+    # Tool shortcuts using enum values for type safety
+    QShortcut(QKeySequence("B"), window, lambda: window.set_tool(ToolType.BRUSH.value))
+    QShortcut(QKeySequence("F"), window, lambda: window.set_tool(ToolType.FILL.value))
+    QShortcut(QKeySequence("E"), window, lambda: window.set_tool(ToolType.ERASER.value))
+    QShortcut(QKeySequence("I"), window, lambda: window.set_tool(ToolType.COLOR_PICKER.value))
+    QShortcut(QKeySequence("H"), window, lambda: window.set_tool(ToolType.PAN.value))
     
     # Canvas operations
     QShortcut(QKeySequence("Ctrl+Del"), window, window.clear_canvas)

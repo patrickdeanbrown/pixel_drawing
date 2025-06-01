@@ -22,6 +22,8 @@ from ..controllers.tools.manager import ToolManager
 from ..views.canvas import PixelCanvas
 from ..views.widgets.color_button import ColorButton
 from ..utils.shortcuts import setup_keyboard_shortcuts
+from ..utils.icon_cache import get_cached_icon, preload_app_icons
+from ..enums import ToolType
 
 
 class PixelDrawingApp(QMainWindow):
@@ -145,7 +147,10 @@ class PixelDrawingApp(QMainWindow):
         self.create_toolbar()
         
         # Create status bar
-        self.statusBar().showMessage("Ready")
+        self.statusBar().showMessage(AppConstants.STATUS_READY)
+        
+        # Preload icons for better performance
+        preload_app_icons()
     
     def create_toolbar(self) -> None:
         """Create the toolbar."""
@@ -224,16 +229,18 @@ class PixelDrawingApp(QMainWindow):
         # Create tool buttons dynamically from tool manager
         self.tool_buttons = {}
         tool_configs = {
-            "brush": {"icon": "icons/paint-brush.svg", "tooltip": "Brush Tool (B)", "checked": True},
-            "fill": {"icon": "icons/paint-bucket.svg", "tooltip": "Fill Bucket Tool (F)", "checked": False},
-            "eraser": {"icon": "icons/eraser.svg", "tooltip": "Eraser Tool (E)", "checked": False},
-            "picker": {"icon": "icons/eyedropper.svg", "tooltip": "Color Picker Tool (I)", "checked": False},
-            "pan": {"icon": "icons/hand.svg", "tooltip": "Pan Tool (H)", "checked": False}
+            ToolType.BRUSH.value: {"icon": AppConstants.ICON_BRUSH, "tooltip": "Brush Tool (B)", "checked": True},
+            ToolType.FILL.value: {"icon": AppConstants.ICON_FILL, "tooltip": "Fill Bucket Tool (F)", "checked": False},
+            ToolType.ERASER.value: {"icon": AppConstants.ICON_ERASER, "tooltip": "Eraser Tool (E)", "checked": False},
+            ToolType.COLOR_PICKER.value: {"icon": AppConstants.ICON_COLOR_PICKER, "tooltip": "Color Picker Tool (I)", "checked": False},
+            ToolType.PAN.value: {"icon": AppConstants.ICON_PAN, "tooltip": "Pan Tool (H)", "checked": False}
         }
         
         for tool_id, config in tool_configs.items():
             btn = QPushButton()
-            btn.setIcon(self.create_svg_icon(config["icon"]))
+            icon = get_cached_icon(config["icon"], AppConstants.ICON_SIZE)
+            if icon:
+                btn.setIcon(icon)
             btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
             btn.setCheckable(True)
             btn.setChecked(config["checked"])
@@ -421,20 +428,6 @@ class PixelDrawingApp(QMainWindow):
         if file_path:
             self._file_service.export_png(file_path, self._model)
     
-    def create_svg_icon(self, svg_path: str) -> QIcon:
-        """Create a QIcon from an SVG file."""
-        if not os.path.exists(svg_path):
-            return QIcon()  # Return empty icon if file doesn't exist
-        
-        renderer = QSvgRenderer(svg_path)
-        pixmap = QPixmap(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        
-        painter = QPainter(pixmap)
-        renderer.render(painter)
-        painter.end()
-        
-        return QIcon(pixmap)
     
     def resize_canvas(self) -> None:
         """Resize the canvas with validation."""
@@ -583,9 +576,9 @@ class PixelDrawingApp(QMainWindow):
     def undo(self) -> None:
         """Undo the last operation."""
         if self._model.undo():
-            self.statusBar().showMessage("Undone", 2000)
+            self.statusBar().showMessage(AppConstants.STATUS_UNDONE, 2000)
     
     def redo(self) -> None:
         """Redo the last undone operation."""
         if self._model.redo():
-            self.statusBar().showMessage("Redone", 2000)
+            self.statusBar().showMessage(AppConstants.STATUS_REDONE, 2000)

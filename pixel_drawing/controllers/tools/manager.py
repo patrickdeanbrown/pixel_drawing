@@ -11,6 +11,7 @@ from .eraser import EraserTool
 from .color_picker import ColorPickerTool
 from .pan import PanTool
 from ...models import PixelArtModel
+from ...enums import ToolType
 
 
 class ToolManager(QObject):
@@ -35,15 +36,15 @@ class ToolManager(QObject):
         self._tools: Dict[str, DrawingTool] = {}
         self._current_tool: Optional[DrawingTool] = None
         
-        # Register all available tools
-        self.register_tool("brush", BrushTool(model))
-        self.register_tool("fill", FillTool(model))
-        self.register_tool("eraser", EraserTool(model))
-        self.register_tool("picker", ColorPickerTool(model))
-        self.register_tool("pan", PanTool(model))
+        # Register all available tools using enum values
+        self.register_tool(ToolType.BRUSH.value, BrushTool(model))
+        self.register_tool(ToolType.FILL.value, FillTool(model))
+        self.register_tool(ToolType.ERASER.value, EraserTool(model))
+        self.register_tool(ToolType.COLOR_PICKER.value, ColorPickerTool(model))
+        self.register_tool(ToolType.PAN.value, PanTool(model))
         
         # Set default tool
-        self.set_current_tool("brush")
+        self.set_current_tool(ToolType.BRUSH.value)
     
     def register_tool(self, tool_id: str, tool: DrawingTool) -> None:
         """Register a new tool.

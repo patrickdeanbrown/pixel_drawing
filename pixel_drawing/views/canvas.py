@@ -10,6 +10,8 @@ from ..controllers.tools import ToolManager
 from ..constants import AppConstants
 from ..exceptions import ValidationError
 from ..utils.cursors import CursorManager
+from ..utils.dirty_rectangles import DirtyRegionManager
+from ..enums import ToolType
 
 
 class PixelCanvas(QWidget):
@@ -89,7 +91,7 @@ class PixelCanvas(QWidget):
         self._update_timer = QTimer()
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._delayed_update)
-        self._pending_updates = set()
+        self._dirty_region_manager = DirtyRegionManager(pixel_size, AppConstants.DIRTY_RECT_MERGE_THRESHOLD)
     
     @property
     def model(self) -> PixelArtModel:
@@ -109,44 +111,21 @@ class PixelCanvas(QWidget):
     
     def _on_pixel_changed(self, x: int, y: int, color: QColor) -> None:
         """Handle pixel changes from model with batched updates."""
-        # Add to pending updates for batched processing
-        self._pending_updates.add((x, y))
+        # Add to dirty region manager for optimized updates
+        self._dirty_region_manager.mark_pixel_dirty(x, y)
         
         # Start or restart the update timer for smooth batching
         if not self._update_timer.isActive():
-            self._update_timer.start(16)  # ~60 FPS updates
+            self._update_timer.start(AppConstants.UPDATE_TIMER_INTERVAL)
     
     def _delayed_update(self) -> None:
         """Process batched pixel updates for better performance."""
-        if not self._pending_updates:
-            return
-            
-        # Calculate bounding rect for all pending updates
-        min_x = min(x for x, y in self._pending_updates)
-        max_x = max(x for x, y in self._pending_updates)
-        min_y = min(y for x, y in self._pending_updates)
-        max_y = max(y for x, y in self._pending_updates)
+        # Get optimized update rectangles from dirty region manager
+        update_rects = self._dirty_region_manager.get_update_rectangles()
         
-        # Update the bounding region
-        update_rect = QRect(
-            min_x * self.pixel_size, 
-            min_y * self.pixel_size,
-            (max_x - min_x + 1) * self.pixel_size,
-            (max_y - min_y + 1) * self.pixel_size
-        )
-        
-        self._pending_updates.clear()
-        self.update(update_rect)
-    
-    def _on_pixel_changed_legacy(self, x: int, y: int, color: QColor) -> None:
-        """Legacy pixel change handler for single updates."""
-        # Update only the changed pixel region
-        pixel_rect = QRect(x * self.pixel_size, y * self.pixel_size, 
-                          self.pixel_size, self.pixel_size)
-        self.update(pixel_rect)
-        
-        # Emit signal for color usage tracking
-        self.color_used.emit(color)
+        # Update each optimized region
+        for rect in update_rects:
+            self.update(rect)
     
     def _on_canvas_resized(self, new_width: int, new_height: int) -> None:
         """Handle canvas resize from model."""

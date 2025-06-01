@@ -12,6 +12,8 @@ from .controllers import (
 )
 from .services import FileService
 from .views import PixelCanvas, PixelDrawingApp, ColorButton
+from .enums import ToolType, FileExtension
+from .commands import Command, SetPixelCommand, CommandHistory
 
 __version__ = "1.0.0"
 __author__ = "Pixel Drawing Team"
@@ -42,4 +44,11 @@ __all__ = [
     'PixelDrawingError',
     'FileOperationError', 
     'ValidationError',
+    
+    # Enums and commands
+    'ToolType',
+    'FileExtension',
+    'Command',
+    'SetPixelCommand',
+    'CommandHistory',
 ]

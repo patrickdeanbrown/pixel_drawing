@@ -39,3 +39,31 @@ class AppConstants:
     # File formats
     PROJECT_FILE_FILTER = "JSON files (*.json)"
     PNG_FILE_FILTER = "PNG files (*.png)"
+    
+    # File extensions
+    JSON_EXTENSION = ".json"
+    PNG_EXTENSION = ".png"
+    TMP_EXTENSION = ".tmp"
+    BAK_EXTENSION = ".bak"
+    
+    # Icon paths
+    ICON_BRUSH = "icons/paint-brush.svg"
+    ICON_FILL = "icons/paint-bucket.svg"
+    ICON_ERASER = "icons/eraser.svg"
+    ICON_COLOR_PICKER = "icons/eyedropper.svg"
+    ICON_PAN = "icons/hand.svg"
+    
+    # Performance settings
+    UPDATE_TIMER_INTERVAL = 16  # ~60 FPS
+    MAX_UNDO_HISTORY = 50
+    DIRTY_RECT_MERGE_THRESHOLD = 3
+    
+    # Error messages
+    ERROR_COORDS_OUT_OF_BOUNDS = "Coordinates out of bounds"
+    ERROR_INVALID_COLOR = "Invalid color"
+    ERROR_INVALID_DIMENSIONS = "Invalid canvas dimensions"
+    
+    # Status messages
+    STATUS_READY = "Ready"
+    STATUS_UNDONE = "Undone"
+    STATUS_REDONE = "Redone"

@@ -31,5 +31,10 @@ def setup_keyboard_shortcuts(window: QMainWindow) -> None:
     # Canvas operations
     QShortcut(QKeySequence("Ctrl+Del"), window, window.clear_canvas)
     
+    # Undo/Redo operations
+    QShortcut(QKeySequence("Ctrl+Z"), window, window.undo)
+    QShortcut(QKeySequence("Ctrl+Y"), window, window.redo)
+    QShortcut(QKeySequence("Ctrl+Shift+Z"), window, window.redo)
+    
     # Application shortcuts
     QShortcut(QKeySequence("Ctrl+Q"), window, window.close)

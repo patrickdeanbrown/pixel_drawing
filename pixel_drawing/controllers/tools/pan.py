@@ -30,6 +30,7 @@ class PanTool(DrawingTool):
         # Use hand cursor for pan tool
         hand_cursor = QCursor(Qt.CursorShape.OpenHandCursor)
         super().__init__("Pan", model, cursor=hand_cursor, shortcut="H")
+        self.set_icon_path("icons/hand.svg")
         self.signals = PanToolSignals()
         self._is_panning = False
         self._last_pan_point = QPoint()

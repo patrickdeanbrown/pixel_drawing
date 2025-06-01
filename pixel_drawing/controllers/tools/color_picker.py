@@ -29,6 +29,7 @@ class ColorPickerTool(DrawingTool):
             model: PixelArtModel to sample colors from
         """
         super().__init__("Color Picker", model, shortcut="I")
+        self.set_icon_path("icons/eyedropper.svg")
         self.signals = ColorPickerToolSignals()
         # Note: We'll need to connect the signal in the tool manager or main window
         

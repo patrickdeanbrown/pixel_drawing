@@ -3,6 +3,7 @@
 from typing import Tuple, Optional, List, Dict
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QColor
+import copy
 
 from ..constants import AppConstants
 from ..validators import validate_canvas_dimensions
@@ -61,6 +62,11 @@ class PixelArtModel(QObject):
         self._pixels: Dict[Tuple[int, int], QColor] = {}
         self._current_file: Optional[str] = None
         self._is_modified = False
+        
+        # Simple undo/redo system
+        self._history: List[Dict[Tuple[int, int], QColor]] = []
+        self._history_index = -1
+        self._max_history = 50
         
         # Initialize with default background color
         self.clear()
@@ -142,6 +148,9 @@ class PixelArtModel(QObject):
         old_color = self.get_pixel(x, y)
         if old_color == color:
             return False
+        
+        # Save current state for undo before making changes
+        self._save_state()
         
         # Memory optimization: remove default color pixels instead of storing them
         default_color = QColor(AppConstants.DEFAULT_BG_COLOR)
@@ -338,3 +347,61 @@ class PixelArtModel(QObject):
         if file_path:
             self._is_modified = False
             self.model_saved.emit(file_path)
+    
+    def _save_state(self) -> None:
+        """Save current state to history for undo functionality."""
+        # Remove any future history if we're not at the end
+        if self._history_index < len(self._history) - 1:
+            self._history = self._history[:self._history_index + 1]
+        
+        # Add current state to history
+        current_state = copy.deepcopy(self._pixels)
+        self._history.append(current_state)
+        self._history_index += 1
+        
+        # Limit history size
+        if len(self._history) > self._max_history:
+            self._history.pop(0)
+            self._history_index -= 1
+    
+    def can_undo(self) -> bool:
+        """Check if undo is available."""
+        return self._history_index > 0
+    
+    def can_redo(self) -> bool:
+        """Check if redo is available."""
+        return self._history_index < len(self._history) - 1
+    
+    def undo(self) -> bool:
+        """Undo the last operation."""
+        if not self.can_undo():
+            return False
+        
+        self._history_index -= 1
+        self._pixels = copy.deepcopy(self._history[self._history_index])
+        self._is_modified = True
+        
+        # Emit signals for all changed pixels
+        for y in range(self._height):
+            for x in range(self._width):
+                color = self.get_pixel(x, y)
+                self.pixel_changed.emit(x, y, color)
+        
+        return True
+    
+    def redo(self) -> bool:
+        """Redo the last undone operation."""
+        if not self.can_redo():
+            return False
+        
+        self._history_index += 1
+        self._pixels = copy.deepcopy(self._history[self._history_index])
+        self._is_modified = True
+        
+        # Emit signals for all changed pixels
+        for y in range(self._height):
+            for x in range(self._width):
+                color = self.get_pixel(x, y)
+                self.pixel_changed.emit(x, y, color)
+        
+        return True

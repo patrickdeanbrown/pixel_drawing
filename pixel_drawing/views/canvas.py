@@ -2,7 +2,7 @@
 
 from typing import Tuple, Optional
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal
+from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal, QTimer
 from PyQt6.QtGui import QPainter, QPen, QColor
 
 from ..models import PixelArtModel
@@ -86,6 +86,10 @@ class PixelCanvas(QWidget):
         self._grid_pen = QPen(QColor(AppConstants.GRID_COLOR), 1)
         self._cached_background = None
         self._last_canvas_size = (0, 0)
+        self._update_timer = QTimer()
+        self._update_timer.setSingleShot(True)
+        self._update_timer.timeout.connect(self._delayed_update)
+        self._pending_updates = set()
     
     @property
     def model(self) -> PixelArtModel:
@@ -104,7 +108,38 @@ class PixelCanvas(QWidget):
         self.setFixedSize(canvas_width, canvas_height)
     
     def _on_pixel_changed(self, x: int, y: int, color: QColor) -> None:
-        """Handle pixel changes from model."""
+        """Handle pixel changes from model with batched updates."""
+        # Add to pending updates for batched processing
+        self._pending_updates.add((x, y))
+        
+        # Start or restart the update timer for smooth batching
+        if not self._update_timer.isActive():
+            self._update_timer.start(16)  # ~60 FPS updates
+    
+    def _delayed_update(self) -> None:
+        """Process batched pixel updates for better performance."""
+        if not self._pending_updates:
+            return
+            
+        # Calculate bounding rect for all pending updates
+        min_x = min(x for x, y in self._pending_updates)
+        max_x = max(x for x, y in self._pending_updates)
+        min_y = min(y for x, y in self._pending_updates)
+        max_y = max(y for x, y in self._pending_updates)
+        
+        # Update the bounding region
+        update_rect = QRect(
+            min_x * self.pixel_size, 
+            min_y * self.pixel_size,
+            (max_x - min_x + 1) * self.pixel_size,
+            (max_y - min_y + 1) * self.pixel_size
+        )
+        
+        self._pending_updates.clear()
+        self.update(update_rect)
+    
+    def _on_pixel_changed_legacy(self, x: int, y: int, color: QColor) -> None:
+        """Legacy pixel change handler for single updates."""
         # Update only the changed pixel region
         pixel_rect = QRect(x * self.pixel_size, y * self.pixel_size, 
                           self.pixel_size, self.pixel_size)
@@ -262,8 +297,12 @@ class PixelCanvas(QWidget):
         """Update cursor based on current tool."""
         current_tool = self._tool_manager.current_tool
         if current_tool:
-            # Get tool's cursor (either custom or default)
-            cursor = current_tool.cursor
+            # Try to get custom cursor from icon first
+            icon_path = current_tool.icon_path
+            if icon_path:
+                cursor = self._cursor_manager.get_cursor(tool_id, icon_path)
+            else:
+                cursor = current_tool.cursor
             self.setCursor(cursor)
     
     def _connect_tool_signals(self) -> None:

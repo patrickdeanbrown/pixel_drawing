@@ -7,9 +7,9 @@ from typing import Optional
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QFrame, QGroupBox, QSpinBox, QFileDialog, QMessageBox,
-    QColorDialog, QToolBar
+    QColorDialog, QToolBar, QScrollArea
 )
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve, QRect, QTimer
 from PyQt6.QtGui import QPainter, QColor, QPixmap, QIcon, QAction, QFont
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtSvg import QSvgRenderer
@@ -122,10 +122,11 @@ class PixelDrawingApp(QMainWindow):
         # Create main layout
         main_layout = QHBoxLayout(central_widget)
         
-        # Create canvas area
-        canvas_frame = QFrame()
-        canvas_frame.setFrameStyle(QFrame.Shape.StyledPanel)
-        canvas_layout = QVBoxLayout(canvas_frame)
+        # Create canvas area with scroll capability
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.scroll_area.setWidgetResizable(False)  # Fixed size for pixel perfect rendering
+        self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.canvas = PixelCanvas(self, self._model, AppConstants.DEFAULT_PIXEL_SIZE)
         # Connect canvas signals for decoupled communication
@@ -133,9 +134,9 @@ class PixelDrawingApp(QMainWindow):
         self.canvas.tool_changed.connect(self._on_tool_changed)
         self.canvas.pixel_hovered.connect(self._on_pixel_hovered)
         # Color used signal will handle color picker integration automatically
-        canvas_layout.addWidget(self.canvas, alignment=Qt.AlignmentFlag.AlignCenter)
         
-        main_layout.addWidget(canvas_frame, 1)
+        self.scroll_area.setWidget(self.canvas)
+        main_layout.addWidget(self.scroll_area, 1)
         
         # Create side panel
         self.create_side_panel(main_layout)
@@ -173,6 +174,19 @@ class PixelDrawingApp(QMainWindow):
         export_action = QAction("Export PNG", self)
         export_action.triggered.connect(self.export_png)
         toolbar.addAction(export_action)
+        
+        toolbar.addSeparator()
+        
+        # Undo/Redo actions
+        undo_action = QAction("Undo", self)
+        undo_action.setShortcut("Ctrl+Z")
+        undo_action.triggered.connect(self.undo)
+        toolbar.addAction(undo_action)
+        
+        redo_action = QAction("Redo", self)
+        redo_action.setShortcut("Ctrl+Y")
+        redo_action.triggered.connect(self.redo)
+        toolbar.addAction(redo_action)
         
         toolbar.addSeparator()
         
@@ -226,6 +240,8 @@ class PixelDrawingApp(QMainWindow):
             btn.setToolTip(config["tooltip"])
             btn.setFixedSize(AppConstants.ICON_SIZE + 16, AppConstants.ICON_SIZE + 16)
             btn.clicked.connect(partial(self.set_tool, tool_id))
+            # Add hover animation properties
+            self._setup_button_animations(btn)
             self.tool_buttons[tool_id] = btn
             tools_layout.addWidget(btn)
         
@@ -507,3 +523,69 @@ class PixelDrawingApp(QMainWindow):
     def _on_file_operation_failed(self, operation: str, error_message: str) -> None:
         """Handle file operation failures."""
         QMessageBox.critical(self, f"{operation.title()} Error", error_message)
+    
+    def handle_pan_request(self, delta_x: int, delta_y: int) -> None:
+        """Handle pan requests from canvas.
+        
+        Args:
+            delta_x: Horizontal movement in pixels
+            delta_y: Vertical movement in pixels
+        """
+        # Get current scroll positions
+        h_scroll = self.scroll_area.horizontalScrollBar()
+        v_scroll = self.scroll_area.verticalScrollBar()
+        
+        # Calculate new positions (invert delta for natural panning)
+        new_h = h_scroll.value() - delta_x * self.canvas.pixel_size
+        new_v = v_scroll.value() - delta_y * self.canvas.pixel_size
+        
+        # Apply new scroll positions
+        h_scroll.setValue(new_h)
+        v_scroll.setValue(new_v)
+    
+    def _setup_button_animations(self, button: QPushButton) -> None:
+        """Set up smooth hover animations for tool buttons.
+        
+        Args:
+            button: QPushButton to animate
+        """
+        # Enhanced button styling with smooth transitions
+        button.setStyleSheet("""
+            QPushButton {
+                background-color: #FFFFFF;
+                border: 2px solid #CCCCCC;
+                border-radius: 6px;
+                padding: 3px;
+                transition: all 0.2s ease-in-out;
+            }
+            QPushButton:hover {
+                background-color: #E6F3FF;
+                border-color: #0066CC;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+            }
+            QPushButton:pressed {
+                background-color: #CCE7FF;
+                transform: translateY(0px);
+                box-shadow: 0 1px 4px rgba(0, 102, 204, 0.2);
+            }
+            QPushButton:checked {
+                background-color: #0066CC;
+                border-color: #004499;
+                color: white;
+            }
+            QPushButton:checked:hover {
+                background-color: #0077DD;
+                border-color: #0055AA;
+            }
+        """)
+    
+    def undo(self) -> None:
+        """Undo the last operation."""
+        if self._model.undo():
+            self.statusBar().showMessage("Undone", 2000)
+    
+    def redo(self) -> None:
+        """Redo the last undone operation."""
+        if self._model.redo():
+            self.statusBar().showMessage("Redone", 2000)

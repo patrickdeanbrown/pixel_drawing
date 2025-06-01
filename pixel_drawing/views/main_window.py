@@ -23,6 +23,8 @@ from ..views.canvas import PixelCanvas
 from ..views.widgets.color_button import ColorButton
 from ..utils.shortcuts import setup_keyboard_shortcuts
 from ..utils.icon_cache import get_cached_icon, preload_app_icons
+from ..utils.icon_effects import get_tool_icon
+from ..utils.logging import log_info, log_debug
 from ..enums import ToolType
 
 
@@ -200,18 +202,19 @@ class PixelDrawingApp(QMainWindow):
         color_layout = QHBoxLayout(color_widget)
         color_layout.setContentsMargins(5, 0, 5, 0)
         
-        # Current color display (larger)
-        self.toolbar_current_color = QLabel()
+        # Current color display (larger, clickable)
+        self.toolbar_current_color = QPushButton()
         self.toolbar_current_color.setFixedSize(32, 24)
         self.toolbar_current_color.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
-        self.toolbar_current_color.setToolTip("Current Color")
+        self.toolbar_current_color.setToolTip("Current Color - Click to choose new color")
+        self.toolbar_current_color.clicked.connect(self.choose_color)
         color_layout.addWidget(self.toolbar_current_color)
         
-        # Background color display (smaller, overlapped)
+        # Background color display (smaller, informational)
         self.toolbar_bg_color = QLabel()
         self.toolbar_bg_color.setFixedSize(20, 16)
         self.toolbar_bg_color.setStyleSheet(f"background-color: {AppConstants.DEFAULT_BG_COLOR}; border: 1px solid #CCCCCC;")
-        self.toolbar_bg_color.setToolTip("Background Color")
+        self.toolbar_bg_color.setToolTip("Background Color (used by eraser tool)")
         color_layout.addWidget(self.toolbar_bg_color)
         
         toolbar.addWidget(color_widget)
@@ -238,9 +241,10 @@ class PixelDrawingApp(QMainWindow):
         
         for tool_id, config in tool_configs.items():
             btn = QPushButton()
-            icon = get_cached_icon(config["icon"], AppConstants.ICON_SIZE)
+            icon = get_tool_icon(config["icon"], AppConstants.ICON_SIZE)
             if icon:
                 btn.setIcon(icon)
+                log_debug("ui", f"Created tool button for {tool_id} with stateful icon")
             btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
             btn.setCheckable(True)
             btn.setChecked(config["checked"])
@@ -542,34 +546,36 @@ class PixelDrawingApp(QMainWindow):
         Args:
             button: QPushButton to animate
         """
-        # Enhanced button styling with smooth transitions
+        # Enhanced button styling using Qt-compatible properties
         button.setStyleSheet("""
             QPushButton {
                 background-color: #FFFFFF;
                 border: 2px solid #CCCCCC;
                 border-radius: 6px;
                 padding: 3px;
-                transition: all 0.2s ease-in-out;
+                margin: 1px;
             }
             QPushButton:hover {
                 background-color: #E6F3FF;
                 border-color: #0066CC;
-                transform: translateY(-1px);
-                box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+                border-width: 3px;
+                margin: 0px;
             }
             QPushButton:pressed {
                 background-color: #CCE7FF;
-                transform: translateY(0px);
-                box-shadow: 0 1px 4px rgba(0, 102, 204, 0.2);
+                border: 1px solid #0066CC;
+                margin: 2px;
             }
             QPushButton:checked {
                 background-color: #0066CC;
                 border-color: #004499;
                 color: white;
+                font-weight: bold;
             }
             QPushButton:checked:hover {
                 background-color: #0077DD;
                 border-color: #0055AA;
+                border-width: 3px;
             }
         """)
     

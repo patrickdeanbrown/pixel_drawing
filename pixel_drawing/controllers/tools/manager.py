@@ -107,6 +107,9 @@ class ToolManager(QObject):
             True if tool should receive move events
         """
         if self._current_tool:
+            from ...utils.logging import log_tool_usage
+            tool_name = self._current_tool.name
+            log_tool_usage(tool_name, "press", f"({x},{y})")
             return self._current_tool.on_press(x, y, color)
         return False
     

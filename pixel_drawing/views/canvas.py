@@ -206,6 +206,10 @@ class PixelCanvas(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             pixel_x, pixel_y = self.get_pixel_coords(event.pos())
             
+            # Log coordinate transformation for debugging
+            from ..utils.logging import log_debug
+            log_debug("canvas", f"Mouse press: screen({event.pos().x()},{event.pos().y()}) -> pixel({pixel_x},{pixel_y}) [pixel_size={self.pixel_size}]")
+            
             if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
                 self._is_drawing = self._tool_manager.handle_press(pixel_x, pixel_y, self.current_color)
     
@@ -246,9 +250,21 @@ class PixelCanvas(QWidget):
             new_pixel_size = max(4, min(64, int(self.pixel_size * zoom_factor)))
             
             if new_pixel_size != self.pixel_size:
+                old_pixel_size = self.pixel_size
                 self.pixel_size = new_pixel_size
+                
+                # Update dirty region manager with new pixel size
+                self._dirty_region_manager = DirtyRegionManager(
+                    new_pixel_size, 
+                    AppConstants.DIRTY_RECT_MERGE_THRESHOLD
+                )
+                
                 self._update_widget_size()
                 self.update()
+                
+                # Log zoom operation for debugging
+                from ..utils.logging import log_canvas_event
+                log_canvas_event("zoom", f"Pixel size changed: {old_pixel_size} -> {new_pixel_size}")
                 
             event.accept()
         else:

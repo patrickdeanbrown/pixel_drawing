@@ -683,7 +683,7 @@ class PixelCanvas(QWidget):
         """Handle canvas clear from model."""
         self.update()
     
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         """Paint the pixel grid."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -741,7 +741,7 @@ class PixelCanvas(QWidget):
                     return tool_id
         return None
     
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
         """Handle mouse press events."""
         if event.button() == Qt.MouseButton.LeftButton:
             pixel_x, pixel_y = self.get_pixel_coords(event.pos())
@@ -749,7 +749,7 @@ class PixelCanvas(QWidget):
             if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
                 self._is_drawing = self._tool_manager.handle_press(pixel_x, pixel_y, self.current_color)
     
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event) -> None:
         """Handle mouse move events for continuous drawing and hover."""
         pixel_x, pixel_y = self.get_pixel_coords(event.pos())
         
@@ -762,7 +762,7 @@ class PixelCanvas(QWidget):
             if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
                 self._tool_manager.handle_move(pixel_x, pixel_y, self.current_color)
     
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event) -> None:
         """Handle mouse release events."""
         if event.button() == Qt.MouseButton.LeftButton and self._is_drawing:
             pixel_x, pixel_y = self.get_pixel_coords(event.pos())
@@ -771,11 +771,11 @@ class PixelCanvas(QWidget):
             self._is_drawing = False
     
     # Legacy methods for compatibility - delegate to model
-    def clear_canvas(self):
+    def clear_canvas(self) -> None:
         """Clear all pixels to white."""
         self._model.clear()
     
-    def resize_canvas(self, new_width: int, new_height: int):
+    def resize_canvas(self, new_width: int, new_height: int) -> None:
         """Resize the canvas while preserving existing pixels."""
         try:
             self._model.resize(new_width, new_height)
@@ -793,7 +793,7 @@ class FileService(QObject):
     file_exported = pyqtSignal(str)  # file_path
     operation_failed = pyqtSignal(str, str)  # operation, error_message
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize file service."""
         super().__init__()
     
@@ -936,7 +936,7 @@ class ColorButton(QPushButton):
         self.setFixedSize(AppConstants.COLOR_BUTTON_SIZE, AppConstants.COLOR_BUTTON_SIZE)
         self._update_stylesheet()
     
-    def _update_stylesheet(self):
+    def _update_stylesheet(self) -> None:
         """Update the button stylesheet with current color."""
         self.setStyleSheet(f"""
             QPushButton {{
@@ -949,7 +949,7 @@ class ColorButton(QPushButton):
             }}
         """)
     
-    def set_color(self, color: QColor):
+    def set_color(self, color: QColor) -> None:
         """Update the button color."""
         self.color = color
         self._update_stylesheet()
@@ -1023,7 +1023,7 @@ class PixelDrawingApp(QMainWindow):
         self._file_service.file_exported.connect(self._on_file_exported)
         self._file_service.operation_failed.connect(self._on_file_operation_failed)
     
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """Set up the user interface."""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -1054,7 +1054,7 @@ class PixelDrawingApp(QMainWindow):
         # Create status bar
         self.statusBar().showMessage("Ready")
     
-    def create_toolbar(self):
+    def create_toolbar(self) -> None:
         """Create the toolbar."""
         toolbar = QToolBar()
         self.addToolBar(toolbar)
@@ -1082,7 +1082,7 @@ class PixelDrawingApp(QMainWindow):
         export_action.triggered.connect(self.export_png)
         toolbar.addAction(export_action)
     
-    def create_side_panel(self, main_layout):
+    def create_side_panel(self, main_layout) -> None:
         """Create the side panel with tools and options."""
         side_panel = QWidget()
         side_panel.setMaximumWidth(AppConstants.SIDE_PANEL_WIDTH)
@@ -1153,7 +1153,7 @@ class PixelDrawingApp(QMainWindow):
         side_layout.addStretch()
         main_layout.addWidget(side_panel)
     
-    def create_color_panel(self, parent_layout):
+    def create_color_panel(self, parent_layout) -> None:
         """Create the color selection panel."""
         color_group = QGroupBox("Color")
         color_layout = QVBoxLayout(color_group)
@@ -1195,7 +1195,7 @@ class PixelDrawingApp(QMainWindow):
             self.brush_btn.setChecked(tool_id == "brush")
             self.fill_btn.setChecked(tool_id == "fill")
     
-    def set_color(self, color: QColor, add_to_recent: bool = False):
+    def set_color(self, color: QColor, add_to_recent: bool = False) -> None:
         """Set the current color and optionally update recent colors."""
         if add_to_recent and color != self.current_color and color not in self.recent_colors:
             self.recent_colors.insert(0, color)
@@ -1211,21 +1211,21 @@ class PixelDrawingApp(QMainWindow):
         if 0 <= index < len(self.recent_colors):
             self.set_color(self.recent_colors[index], add_to_recent=True)
     
-    def update_recent_colors(self):
+    def update_recent_colors(self) -> None:
         """Update recent color buttons."""
         for i, btn in enumerate(self.recent_buttons):
             btn.set_color(self.recent_colors[i])
             btn.clicked.disconnect()
             btn.clicked.connect(partial(self._on_recent_color_clicked, i))
     
-    def choose_color(self):
+    def choose_color(self) -> None:
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Color")
         if color.isValid():
             self.set_color(color, add_to_recent=True)
     
     
-    def new_file(self):
+    def new_file(self) -> None:
         """Create a new file."""
         if self._model.is_modified:
             reply = QMessageBox.question(self, "New File", "Are you sure? Unsaved changes will be lost.")
@@ -1250,28 +1250,28 @@ class PixelDrawingApp(QMainWindow):
         self.height_spin.setValue(self._model.height)
         self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
     
-    def open_file(self):
+    def open_file(self) -> None:
         """Open a pixel art file."""
         file_path, _ = QFileDialog.getOpenFileName(self, "Open Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
         
         if file_path:
             self._file_service.load_file(file_path, self._model)
     
-    def save_file(self):
+    def save_file(self) -> None:
         """Save the current pixel art."""
         if self._model.current_file:
             self._file_service.save_file(self._model.current_file, self._model)
         else:
             self.save_as_file()
     
-    def save_as_file(self):
+    def save_as_file(self) -> None:
         """Save with a new filename."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Save Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
         
         if file_path:
             self._file_service.save_file(file_path, self._model)
     
-    def export_png(self):
+    def export_png(self) -> None:
         """Export as PNG image."""
         file_path, _ = QFileDialog.getSaveFileName(self, "Export as PNG", "", AppConstants.PNG_FILE_FILTER)
         
@@ -1293,7 +1293,7 @@ class PixelDrawingApp(QMainWindow):
         
         return QIcon(pixmap)
     
-    def resize_canvas(self):
+    def resize_canvas(self) -> None:
         """Resize the canvas with validation."""
         new_width = self.width_spin.value()
         new_height = self.height_spin.value()
@@ -1321,7 +1321,7 @@ class PixelDrawingApp(QMainWindow):
             self.width_spin.setValue(self._model.width)
             self.height_spin.setValue(self._model.height)
     
-    def clear_canvas(self):
+    def clear_canvas(self) -> None:
         """Clear the canvas."""
         reply = QMessageBox.question(self, "Clear Canvas", "Are you sure you want to clear the canvas?")
         if reply == QMessageBox.StandardButton.Yes:
@@ -1378,7 +1378,7 @@ class PixelDrawingApp(QMainWindow):
         QMessageBox.critical(self, f"{operation.title()} Error", error_message)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     app = QApplication(sys.argv)
     app.setApplicationName("Pixel Drawing")

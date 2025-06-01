@@ -18,6 +18,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QPoint, QRect, QSize, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon, QAction, QFont
+from PyQt6.QtSvgWidgets import QSvgWidget
+from PyQt6.QtSvg import QSvgRenderer
 
 
 class PixelCanvas(QWidget):
@@ -97,6 +99,9 @@ class PixelCanvas(QWidget):
         """Paint a single pixel with the current color."""
         self.pixels[(x, y)] = QColor(self.current_color)
         self.update()  # Trigger repaint
+        # Notify parent that color was used
+        if hasattr(self.parent(), 'on_color_used'):
+            self.parent().on_color_used(self.current_color)
     
     def fill_bucket(self, start_x: int, start_y: int):
         """Fill connected pixels of the same color."""
@@ -123,6 +128,9 @@ class PixelCanvas(QWidget):
             stack.extend([(x+1, y), (x-1, y), (x, y+1), (x, y-1)])
         
         self.update()
+        # Notify parent that color was used
+        if hasattr(self.parent(), 'on_color_used'):
+            self.parent().on_color_used(self.current_color)
     
     def clear_canvas(self):
         """Clear all pixels to white."""
@@ -187,83 +195,6 @@ class ColorButton(QPushButton):
         """)
 
 
-class ColorWheel(QWidget):
-    """Custom color wheel widget using QPainter."""
-    
-    color_selected = pyqtSignal(QColor)
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setFixedSize(150, 150)
-        self.current_hue = 0.0
-        
-    def paintEvent(self, event):
-        """Paint the color wheel."""
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        center = self.width() // 2
-        outer_radius = center - 10
-        inner_radius = 20
-        
-        # Draw color wheel
-        for angle in range(360):
-            # Calculate hue
-            adjusted_angle = (90 - angle) % 360
-            hue = adjusted_angle / 360.0
-            
-            for radius in range(inner_radius, outer_radius, 2):
-                # Calculate saturation
-                saturation = min(1.0, (radius - inner_radius) / (outer_radius - inner_radius))
-                
-                # Convert HSV to RGB
-                color = QColor.fromHsvF(hue, saturation, 1.0)
-                
-                # Calculate position
-                x1 = center + radius * math.cos(math.radians(angle))
-                y1 = center + radius * math.sin(math.radians(angle))
-                x2 = center + (radius + 2) * math.cos(math.radians(angle))
-                y2 = center + (radius + 2) * math.sin(math.radians(angle))
-                
-                # Draw segment - convert to integers
-                painter.setPen(QPen(color, 3))
-                painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-        
-        # Draw white center
-        painter.setBrush(QBrush(QColor("white")))
-        painter.setPen(QPen(QColor("#CCCCCC"), 2))
-        painter.drawEllipse(center - inner_radius, center - inner_radius, 
-                          inner_radius * 2, inner_radius * 2)
-    
-    def mousePressEvent(self, event):
-        """Handle color wheel clicks."""
-        center = self.width() // 2
-        x = event.pos().x() - center
-        y = event.pos().y() - center
-        
-        distance = math.sqrt(x*x + y*y)
-        inner_radius = 20
-        outer_radius = center - 10
-        
-        if distance < inner_radius:
-            # White center
-            self.color_selected.emit(QColor("#FFFFFF"))
-        elif distance < outer_radius:
-            # Color wheel area
-            angle_rad = math.atan2(y, x)
-            angle_deg = math.degrees(angle_rad)
-            
-            if angle_deg < 0:
-                angle_deg += 360
-            
-            adjusted_angle = (90 - angle_deg) % 360
-            hue = adjusted_angle / 360.0
-            saturation = min(1.0, (distance - inner_radius) / (outer_radius - inner_radius))
-            
-            self.current_hue = hue
-            color = QColor.fromHsvF(hue, saturation, 1.0)
-            self.color_selected.emit(color)
-
 
 class PixelDrawingApp(QMainWindow):
     """Main application class for the Pixel Drawing app."""
@@ -276,7 +207,7 @@ class PixelDrawingApp(QMainWindow):
         
         self.setup_ui()
         self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1000, 700)
         
         # Apply modern styling
         self.setStyleSheet("""
@@ -376,13 +307,19 @@ class PixelDrawingApp(QMainWindow):
         tools_group = QGroupBox("Tools")
         tools_layout = QVBoxLayout(tools_group)
         
+        # Create brush tool button with icon
         self.brush_btn = QPushButton("Brush")
+        self.brush_btn.setIcon(self.create_svg_icon("icons/paint-brush.svg"))
+        self.brush_btn.setIconSize(QSize(24, 24))
         self.brush_btn.setCheckable(True)
         self.brush_btn.setChecked(True)
         self.brush_btn.clicked.connect(lambda: self.set_tool("brush"))
         tools_layout.addWidget(self.brush_btn)
         
+        # Create fill tool button with icon
         self.fill_btn = QPushButton("Fill Bucket")
+        self.fill_btn.setIcon(self.create_svg_icon("icons/paint-bucket.svg"))
+        self.fill_btn.setIconSize(QSize(24, 24))
         self.fill_btn.setCheckable(True)
         self.fill_btn.clicked.connect(lambda: self.set_tool("fill"))
         tools_layout.addWidget(self.fill_btn)
@@ -447,26 +384,6 @@ class PixelDrawingApp(QMainWindow):
         choose_btn.clicked.connect(self.choose_color)
         color_layout.addWidget(choose_btn)
         
-        # Base colors
-        base_label = QLabel("Base Colors:")
-        base_label.setFont(QFont("Arial", 8))
-        color_layout.addWidget(base_label)
-        
-        base_colors = [
-            "#000000", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
-            "#800000", "#808080", "#800080", "#008000", "#000080", "#808000", "#FFA500", "#FFC0CB"
-        ]
-        
-        base_grid = QGridLayout()
-        for i, color_hex in enumerate(base_colors):
-            row = i // 8
-            col = i % 8
-            color_btn = ColorButton(QColor(color_hex))
-            color_btn.clicked.connect(lambda checked, c=color_hex: self.set_color(QColor(c)))
-            base_grid.addWidget(color_btn, row, col)
-        
-        color_layout.addLayout(base_grid)
-        
         # Recent colors
         recent_label = QLabel("Recent Colors:")
         recent_label.setFont(QFont("Arial", 8))
@@ -476,20 +393,11 @@ class PixelDrawingApp(QMainWindow):
         recent_layout = QHBoxLayout()
         for i in range(6):
             btn = ColorButton(self.recent_colors[i])
-            btn.clicked.connect(lambda checked, idx=i: self.set_color(self.recent_colors[idx]))
+            btn.clicked.connect(lambda checked, idx=i: self.set_color(self.recent_colors[idx], add_to_recent=True))
             self.recent_buttons.append(btn)
             recent_layout.addWidget(btn)
         
         color_layout.addLayout(recent_layout)
-        
-        # Color wheel
-        wheel_label = QLabel("Color Wheel:")
-        wheel_label.setFont(QFont("Arial", 8))
-        color_layout.addWidget(wheel_label)
-        
-        self.color_wheel = ColorWheel()
-        self.color_wheel.color_selected.connect(self.set_color)
-        color_layout.addWidget(self.color_wheel, alignment=Qt.AlignmentFlag.AlignCenter)
         
         parent_layout.addWidget(color_group)
     
@@ -501,9 +409,9 @@ class PixelDrawingApp(QMainWindow):
         self.brush_btn.setChecked(tool == "brush")
         self.fill_btn.setChecked(tool == "fill")
     
-    def set_color(self, color: QColor):
-        """Set the current color and update recent colors."""
-        if color != self.current_color and color not in self.recent_colors:
+    def set_color(self, color: QColor, add_to_recent: bool = False):
+        """Set the current color and optionally update recent colors."""
+        if add_to_recent and color != self.current_color and color not in self.recent_colors:
             self.recent_colors.insert(0, color)
             self.recent_colors = self.recent_colors[:6]
             self.update_recent_colors()
@@ -517,13 +425,14 @@ class PixelDrawingApp(QMainWindow):
         for i, btn in enumerate(self.recent_buttons):
             btn.set_color(self.recent_colors[i])
             btn.clicked.disconnect()
-            btn.clicked.connect(lambda checked, idx=i: self.set_color(self.recent_colors[idx]))
+            btn.clicked.connect(lambda checked, idx=i: self.set_color(self.recent_colors[idx], add_to_recent=True))
     
     def choose_color(self):
         """Open color chooser dialog."""
         color = QColorDialog.getColor(self.current_color, self, "Choose Color")
         if color.isValid():
-            self.set_color(color)
+            self.set_color(color, add_to_recent=True)
+    
     
     def new_file(self):
         """Create a new file."""
@@ -616,6 +525,21 @@ class PixelDrawingApp(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to export PNG: {str(e)}")
     
+    def create_svg_icon(self, svg_path: str) -> QIcon:
+        """Create a QIcon from an SVG file."""
+        if not os.path.exists(svg_path):
+            return QIcon()  # Return empty icon if file doesn't exist
+        
+        renderer = QSvgRenderer(svg_path)
+        pixmap = QPixmap(24, 24)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        
+        painter = QPainter(pixmap)
+        renderer.render(painter)
+        painter.end()
+        
+        return QIcon(pixmap)
+    
     def resize_canvas(self):
         """Resize the canvas."""
         new_width = self.width_spin.value()
@@ -634,6 +558,13 @@ class PixelDrawingApp(QMainWindow):
         reply = QMessageBox.question(self, "Clear Canvas", "Are you sure you want to clear the canvas?")
         if reply == QMessageBox.StandardButton.Yes:
             self.canvas.clear_canvas()
+    
+    def on_color_used(self, color: QColor):
+        """Called when a color is actually used on the canvas."""
+        if color != self.current_color and color not in self.recent_colors:
+            self.recent_colors.insert(0, color)
+            self.recent_colors = self.recent_colors[:6]
+            self.update_recent_colors()
 
 
 def main():

@@ -75,12 +75,14 @@ setup(
     author="Pixel Drawing Team",
     python_requires=">=3.7",
     install_requires=[
+        "PyQt6>=6.4.0",
         "Pillow>=9.0.0",
     ],
-    py_modules=["pixel_drawing"],
+    py_modules=["pixel_drawing", "pixel_drawing_qt"],
     entry_points={
         "console_scripts": [
             "pixel-drawing=pixel_drawing:main",
+            "pixel-drawing-qt=pixel_drawing_qt:main",
         ],
     },
     classifiers=[

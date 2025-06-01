@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal, QObject
 from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
+from ...constants import AppConstants
 
 
 class ColorPickerToolSignals(QObject):
@@ -29,7 +30,7 @@ class ColorPickerTool(DrawingTool):
             model: PixelArtModel to sample colors from
         """
         super().__init__("Color Picker", model, shortcut="I")
-        self.set_icon_path("icons/eyedropper.svg")
+        self.set_icon_path(AppConstants.ICON_COLOR_PICKER)
         self.signals = ColorPickerToolSignals()
         # Note: We'll need to connect the signal in the tool manager or main window
         

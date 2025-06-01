@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon, QPixmap, QPainter
 from PyQt6.QtCore import QSize
 from PyQt6.QtSvg import QSvgRenderer
 import os
+from ..constants import AppConstants
 
 
 class IconCache:
@@ -137,15 +138,15 @@ def get_cached_icon(icon_path: str, size: Optional[int] = None) -> Optional[QIco
 def preload_app_icons() -> None:
     """Preload all application icons for better performance."""
     icon_paths = {
-        "brush": "icons/paint-brush.svg",
-        "fill": "icons/paint-bucket.svg", 
-        "eraser": "icons/eraser.svg",
-        "color_picker": "icons/eyedropper.svg",
-        "pan": "icons/hand.svg"
+        "brush": AppConstants.ICON_BRUSH,
+        "fill": AppConstants.ICON_FILL, 
+        "eraser": AppConstants.ICON_ERASER,
+        "color_picker": AppConstants.ICON_COLOR_PICKER,
+        "pan": AppConstants.ICON_PAN
     }
     
     # Preload common sizes
-    sizes = [16, 24, 32, 48]
+    sizes = AppConstants.ICON_PRELOAD_SIZES
     _icon_cache.preload_icons(icon_paths, sizes)
 
 

@@ -204,7 +204,7 @@ class PixelDrawingApp(QMainWindow):
         
         # Current color display (larger, clickable)
         self.toolbar_current_color = QPushButton()
-        self.toolbar_current_color.setFixedSize(32, 24)
+        self.toolbar_current_color.setFixedSize(AppConstants.TOOLBAR_COLOR_BUTTON_WIDTH, AppConstants.TOOLBAR_COLOR_BUTTON_HEIGHT)
         self.toolbar_current_color.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
         self.toolbar_current_color.setToolTip("Current Color - Click to choose new color")
         self.toolbar_current_color.clicked.connect(self.choose_color)
@@ -212,7 +212,7 @@ class PixelDrawingApp(QMainWindow):
         
         # Background color display (smaller, informational)
         self.toolbar_bg_color = QLabel()
-        self.toolbar_bg_color.setFixedSize(20, 16)
+        self.toolbar_bg_color.setFixedSize(AppConstants.TOOLBAR_BG_COLOR_WIDTH, AppConstants.TOOLBAR_BG_COLOR_HEIGHT)
         self.toolbar_bg_color.setStyleSheet(f"background-color: {AppConstants.DEFAULT_BG_COLOR}; border: 1px solid #CCCCCC;")
         self.toolbar_bg_color.setToolTip("Background Color (used by eraser tool)")
         color_layout.addWidget(self.toolbar_bg_color)
@@ -269,7 +269,7 @@ class PixelDrawingApp(QMainWindow):
         width_layout.addWidget(QLabel("Width:"))
         self.width_spin = QSpinBox()
         self.width_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
-        self.width_spin.setValue(32)
+        self.width_spin.setValue(AppConstants.DEFAULT_CANVAS_WIDTH)
         width_layout.addWidget(self.width_spin)
         size_layout.addLayout(width_layout)
         
@@ -277,7 +277,7 @@ class PixelDrawingApp(QMainWindow):
         height_layout.addWidget(QLabel("Height:"))
         self.height_spin = QSpinBox()
         self.height_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
-        self.height_spin.setValue(32)
+        self.height_spin.setValue(AppConstants.DEFAULT_CANVAS_HEIGHT)
         height_layout.addWidget(self.height_spin)
         size_layout.addLayout(height_layout)
         

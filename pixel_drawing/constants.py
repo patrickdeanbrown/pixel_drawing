@@ -24,6 +24,10 @@ class AppConstants:
     ICON_SIZE = 24
     COLOR_DISPLAY_WIDTH = 100
     COLOR_DISPLAY_HEIGHT = 30
+    TOOLBAR_COLOR_BUTTON_WIDTH = 32
+    TOOLBAR_COLOR_BUTTON_HEIGHT = 24
+    TOOLBAR_BG_COLOR_WIDTH = 20
+    TOOLBAR_BG_COLOR_HEIGHT = 16
     
     # Colors
     DEFAULT_BG_COLOR = "#FFFFFF"
@@ -57,6 +61,9 @@ class AppConstants:
     UPDATE_TIMER_INTERVAL = 16  # ~60 FPS
     MAX_UNDO_HISTORY = 50
     DIRTY_RECT_MERGE_THRESHOLD = 3
+    
+    # Icon preload sizes
+    ICON_PRELOAD_SIZES = [16, 24, 32, 48]
     
     # Error messages
     ERROR_COORDS_OUT_OF_BOUNDS = "Coordinates out of bounds"

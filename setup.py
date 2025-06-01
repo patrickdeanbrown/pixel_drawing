@@ -4,74 +4,27 @@ Setup script for Pixel Drawing application.
 """
 
 from setuptools import setup, find_packages
+import os
 
-with open("README.md", "w") as f:
-    f.write("""# Pixel Drawing
+# Read the contents of README file for long_description
+def read_readme():
+    """Read README.md file for package description."""
+    readme_path = os.path.join(os.path.dirname(__file__), "README.md")
+    try:
+        with open(readme_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        # Fallback description if README.md doesn't exist
+        return "A cross-platform pixel art application for creating retro game assets."
 
-A cross-platform pixel art application for creating retro game assets.
-
-## Features
-
-- Pixel-by-pixel drawing with brush tool
-- Fill bucket for area filling
-- Color selector with custom colors
-- Save/load project files (JSON format)
-- Export to PNG images
-- Resizable canvas with aspect ratio preservation
-- Cross-platform support (Windows, Linux, macOS)
-
-## Installation
-
-1. Install Python 3.7 or higher
-2. Install required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. For Linux users, you may need to install tkinter:
-   ```bash
-   sudo apt-get install python3-tk  # Ubuntu/Debian
-   sudo yum install tkinter         # CentOS/RHEL
-   ```
-
-## Usage
-
-Run the application:
-```bash
-python -m pixel_drawing
-```
-
-## Controls
-
-- **Left Click**: Draw with brush or use fill bucket
-- **Drag**: Continuous drawing with brush
-- **Tools Panel**: Switch between brush and fill bucket
-- **Color Panel**: Choose drawing color
-- **Canvas Size**: Resize the drawing canvas
-- **File Menu**: New, Open, Save, Export functions
-
-## File Formats
-
-- **Project files**: JSON format containing pixel data and canvas dimensions
-- **Export**: PNG images for use in game engines
-
-## Supported Game Engine Formats
-
-The exported PNG files are compatible with:
-- Unity
-- Godot
-- GameMaker Studio
-- Construct 3
-- Any engine that supports standard PNG images
-
-## License
-
-MIT License
-""")
+long_description = read_readme()
 
 setup(
     name="pixel-drawing",
     version="1.0.0",
     description="A cross-platform pixel art application for creating retro game assets",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Pixel Drawing Team",
     python_requires=">=3.7",
     install_requires=[

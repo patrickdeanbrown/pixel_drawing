@@ -5,6 +5,7 @@ from PyQt6.QtGui import QColor
 from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
+from ...constants import AppConstants
 
 
 class FillTool(DrawingTool):
@@ -22,7 +23,7 @@ class FillTool(DrawingTool):
             model: PixelArtModel to perform flood fill on
         """
         super().__init__("Fill Bucket", model, shortcut="F")
-        self.set_icon_path("icons/paint-bucket.svg")
+        self.set_icon_path(AppConstants.ICON_FILL)
     
     def on_press(self, x: int, y: int, color: QColor) -> bool:
         """Perform flood fill operation at specified coordinates.

@@ -6,6 +6,7 @@ from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
 from ...constants import AppConstants
+from ...constants import AppConstants
 
 
 class EraserTool(DrawingTool):
@@ -23,7 +24,7 @@ class EraserTool(DrawingTool):
             model: PixelArtModel to erase on
         """
         super().__init__("Eraser", model, shortcut="E")
-        self.set_icon_path("icons/eraser.svg")
+        self.set_icon_path(AppConstants.ICON_ERASER)
         self._is_erasing = False
         # Eraser uses background color for "erasing"
         self._background_color = QColor(AppConstants.DEFAULT_BG_COLOR)

@@ -21,7 +21,8 @@ class FillTool(DrawingTool):
         Args:
             model: PixelArtModel to perform flood fill on
         """
-        super().__init__("Fill Bucket", model)
+        super().__init__("Fill Bucket", model, shortcut="F")
+        self.set_icon_path("icons/paint-bucket.svg")
     
     def on_press(self, x: int, y: int, color: QColor) -> bool:
         """Perform flood fill operation at specified coordinates.

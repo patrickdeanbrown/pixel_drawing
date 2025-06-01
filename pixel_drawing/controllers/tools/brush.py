@@ -21,8 +21,9 @@ class BrushTool(DrawingTool):
         Args:
             model: PixelArtModel to paint on
         """
-        super().__init__("Brush", model)
+        super().__init__("Brush", model, shortcut="B")
         self._is_drawing = False
+        self.set_icon_path("icons/paint-brush.svg")
     
     def on_press(self, x: int, y: int, color: QColor) -> bool:
         """Start brush stroke at specified coordinates.

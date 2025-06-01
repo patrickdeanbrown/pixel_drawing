@@ -21,9 +21,12 @@ def setup_keyboard_shortcuts(window: QMainWindow) -> None:
     QShortcut(QKeySequence("Ctrl+Shift+S"), window, window.save_as_file)
     QShortcut(QKeySequence("Ctrl+E"), window, window.export_png)
     
-    # Tool shortcuts
+    # Tool shortcuts  
     QShortcut(QKeySequence("B"), window, lambda: window.set_tool("brush"))
     QShortcut(QKeySequence("F"), window, lambda: window.set_tool("fill"))
+    QShortcut(QKeySequence("E"), window, lambda: window.set_tool("eraser"))
+    QShortcut(QKeySequence("I"), window, lambda: window.set_tool("picker"))
+    QShortcut(QKeySequence("H"), window, lambda: window.set_tool("pan"))
     
     # Canvas operations
     QShortcut(QKeySequence("Ctrl+Del"), window, window.clear_canvas)

@@ -6,6 +6,9 @@ from PyQt6.QtGui import QColor
 from .base import DrawingTool
 from .brush import BrushTool
 from .fill import FillTool
+from .eraser import EraserTool
+from .color_picker import ColorPickerTool
+from .pan import PanTool
 from ...models import PixelArtModel
 
 
@@ -27,9 +30,12 @@ class ToolManager:
         self._tools: Dict[str, DrawingTool] = {}
         self._current_tool: Optional[DrawingTool] = None
         
-        # Register default tools
+        # Register all available tools
         self.register_tool("brush", BrushTool(model))
         self.register_tool("fill", FillTool(model))
+        self.register_tool("eraser", EraserTool(model))
+        self.register_tool("picker", ColorPickerTool(model))
+        self.register_tool("pan", PanTool(model))
         
         # Set default tool
         self.set_current_tool("brush")

@@ -21,11 +21,13 @@ from ..services.file_service import FileService
 from ..controllers.tools.manager import ToolManager
 from ..views.canvas import PixelCanvas
 from ..views.widgets.color_button import ColorButton
+from ..views.dialogs.preferences_dialog import PreferencesDialog
 from ..utils.shortcuts import setup_keyboard_shortcuts
 from ..utils.icon_cache import get_cached_icon, preload_app_icons
 from ..utils.icon_effects import get_tool_icon
 from ..utils.logging import log_info, log_debug
 from ..enums import ToolType
+from ..i18n import tr_window, tr_toolbar, tr_panel, tr_dialog, tr_status, tr_filter, tr_tool
 
 
 class PixelDrawingApp(QMainWindow):
@@ -67,7 +69,7 @@ class PixelDrawingApp(QMainWindow):
         
         # Set up UI
         self.setup_ui()
-        self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
+        self.setWindowTitle(tr_window("app_title"))
         self.setMinimumSize(AppConstants.MIN_WINDOW_WIDTH, AppConstants.MIN_WINDOW_HEIGHT)
         
         # Set up keyboard shortcuts using utility function
@@ -145,7 +147,8 @@ class PixelDrawingApp(QMainWindow):
         # Create side panel
         self.create_side_panel(main_layout)
         
-        # Create toolbar
+        # Create menu bar and toolbar  
+        self.create_menu_bar()
         self.create_toolbar()
         
         # Create status bar
@@ -153,6 +156,68 @@ class PixelDrawingApp(QMainWindow):
         
         # Preload icons for better performance
         preload_app_icons()
+
+    def create_menu_bar(self) -> None:
+        """Create the menu bar."""
+        menubar = self.menuBar()
+        
+        # File menu
+        file_menu = menubar.addMenu(tr_panel("file_menu"))
+        
+        # Add existing actions to file menu
+        new_action = file_menu.addAction(tr_toolbar("new"))
+        new_action.setShortcut("Ctrl+N")
+        new_action.triggered.connect(self.new_file)
+        
+        open_action = file_menu.addAction(tr_toolbar("open"))
+        open_action.setShortcut("Ctrl+O")
+        open_action.triggered.connect(self.open_file)
+        
+        file_menu.addSeparator()
+        
+        save_action = file_menu.addAction(tr_toolbar("save"))
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_file)
+        
+        save_as_action = file_menu.addAction(tr_toolbar("save_as"))
+        save_as_action.setShortcut("Ctrl+Shift+S")
+        save_as_action.triggered.connect(self.save_as_file)
+        
+        file_menu.addSeparator()
+        
+        export_action = file_menu.addAction(tr_toolbar("export_png"))
+        export_action.setShortcut("Ctrl+E")
+        export_action.triggered.connect(self.export_png)
+        
+        file_menu.addSeparator()
+        
+        quit_action = file_menu.addAction(tr_panel("quit"))
+        quit_action.setShortcut("Ctrl+Q")
+        quit_action.triggered.connect(self.close)
+        
+        # Edit menu
+        edit_menu = menubar.addMenu(tr_panel("edit_menu"))
+        
+        undo_action = edit_menu.addAction(tr_toolbar("undo"))
+        undo_action.setShortcut("Ctrl+Z")
+        undo_action.triggered.connect(self.undo)
+        
+        redo_action = edit_menu.addAction(tr_toolbar("redo"))
+        redo_action.setShortcut("Ctrl+Y")
+        redo_action.triggered.connect(self.redo)
+        
+        edit_menu.addSeparator()
+        
+        clear_action = edit_menu.addAction(tr_panel("clear_canvas"))
+        clear_action.setShortcut("Ctrl+Del")
+        clear_action.triggered.connect(self.clear_canvas)
+        
+        # Settings menu
+        settings_menu = menubar.addMenu(tr_panel("settings_menu"))
+        
+        preferences_action = settings_menu.addAction(tr_panel("preferences"))
+        preferences_action.setShortcut("Ctrl+,")
+        preferences_action.triggered.connect(self.show_preferences)
     
     def create_toolbar(self) -> None:
         """Create the toolbar."""
@@ -160,37 +225,37 @@ class PixelDrawingApp(QMainWindow):
         self.addToolBar(toolbar)
         
         # File actions
-        new_action = QAction("New", self)
+        new_action = QAction(tr_toolbar("new"), self)
         new_action.triggered.connect(self.new_file)
         toolbar.addAction(new_action)
         
-        open_action = QAction("Open", self)
+        open_action = QAction(tr_toolbar("open"), self)
         open_action.triggered.connect(self.open_file)
         toolbar.addAction(open_action)
         
-        save_action = QAction("Save", self)
+        save_action = QAction(tr_toolbar("save"), self)
         save_action.triggered.connect(self.save_file)
         toolbar.addAction(save_action)
         
-        save_as_action = QAction("Save As", self)
+        save_as_action = QAction(tr_toolbar("save_as"), self)
         save_as_action.triggered.connect(self.save_as_file)
         toolbar.addAction(save_as_action)
         
         toolbar.addSeparator()
         
-        export_action = QAction("Export PNG", self)
+        export_action = QAction(tr_toolbar("export_png"), self)
         export_action.triggered.connect(self.export_png)
         toolbar.addAction(export_action)
         
         toolbar.addSeparator()
         
         # Undo/Redo actions
-        undo_action = QAction("Undo", self)
+        undo_action = QAction(tr_toolbar("undo"), self)
         undo_action.setShortcut("Ctrl+Z")
         undo_action.triggered.connect(self.undo)
         toolbar.addAction(undo_action)
         
-        redo_action = QAction("Redo", self)
+        redo_action = QAction(tr_toolbar("redo"), self)
         redo_action.setShortcut("Ctrl+Y")
         redo_action.triggered.connect(self.redo)
         toolbar.addAction(redo_action)
@@ -206,7 +271,7 @@ class PixelDrawingApp(QMainWindow):
         self.toolbar_current_color = QPushButton()
         self.toolbar_current_color.setFixedSize(AppConstants.TOOLBAR_COLOR_BUTTON_WIDTH, AppConstants.TOOLBAR_COLOR_BUTTON_HEIGHT)
         self.toolbar_current_color.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
-        self.toolbar_current_color.setToolTip("Current Color - Click to choose new color")
+        self.toolbar_current_color.setToolTip(tr_panel("current_color_tooltip"))
         self.toolbar_current_color.clicked.connect(self.choose_color)
         color_layout.addWidget(self.toolbar_current_color)
         
@@ -214,7 +279,7 @@ class PixelDrawingApp(QMainWindow):
         self.toolbar_bg_color = QLabel()
         self.toolbar_bg_color.setFixedSize(AppConstants.TOOLBAR_BG_COLOR_WIDTH, AppConstants.TOOLBAR_BG_COLOR_HEIGHT)
         self.toolbar_bg_color.setStyleSheet(f"background-color: {AppConstants.DEFAULT_BG_COLOR}; border: 1px solid #CCCCCC;")
-        self.toolbar_bg_color.setToolTip("Background Color (used by eraser tool)")
+        self.toolbar_bg_color.setToolTip(tr_panel("background_color_tooltip"))
         color_layout.addWidget(self.toolbar_bg_color)
         
         toolbar.addWidget(color_widget)
@@ -226,17 +291,17 @@ class PixelDrawingApp(QMainWindow):
         side_layout = QVBoxLayout(side_panel)
         
         # Tools group
-        tools_group = QGroupBox("Tools")
+        tools_group = QGroupBox(tr_panel("tools_group"))
         tools_layout = QVBoxLayout(tools_group)
         
         # Create tool buttons dynamically from tool manager
         self.tool_buttons = {}
         tool_configs = {
-            ToolType.BRUSH.value: {"icon": AppConstants.ICON_BRUSH, "tooltip": "Brush Tool (B)", "checked": True},
-            ToolType.FILL.value: {"icon": AppConstants.ICON_FILL, "tooltip": "Fill Bucket Tool (F)", "checked": False},
-            ToolType.ERASER.value: {"icon": AppConstants.ICON_ERASER, "tooltip": "Eraser Tool (E)", "checked": False},
-            ToolType.COLOR_PICKER.value: {"icon": AppConstants.ICON_COLOR_PICKER, "tooltip": "Color Picker Tool (I)", "checked": False},
-            ToolType.PAN.value: {"icon": AppConstants.ICON_PAN, "tooltip": "Pan Tool (H)", "checked": False}
+            ToolType.BRUSH.value: {"icon": AppConstants.ICON_BRUSH, "tooltip": tr_tool("brush_tooltip"), "checked": True},
+            ToolType.FILL.value: {"icon": AppConstants.ICON_FILL, "tooltip": tr_tool("fill_tooltip"), "checked": False},
+            ToolType.ERASER.value: {"icon": AppConstants.ICON_ERASER, "tooltip": tr_tool("eraser_tooltip"), "checked": False},
+            ToolType.COLOR_PICKER.value: {"icon": AppConstants.ICON_COLOR_PICKER, "tooltip": tr_tool("color_picker_tooltip"), "checked": False},
+            ToolType.PAN.value: {"icon": AppConstants.ICON_PAN, "tooltip": tr_tool("pan_tooltip"), "checked": False}
         }
         
         for tool_id, config in tool_configs.items():
@@ -262,11 +327,11 @@ class PixelDrawingApp(QMainWindow):
         self.create_color_panel(side_layout)
         
         # Canvas size group
-        size_group = QGroupBox("Canvas Size")
+        size_group = QGroupBox(tr_panel("canvas_size_group"))
         size_layout = QVBoxLayout(size_group)
         
         width_layout = QHBoxLayout()
-        width_layout.addWidget(QLabel("Width:"))
+        width_layout.addWidget(QLabel(tr_panel("width_label")))
         self.width_spin = QSpinBox()
         self.width_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
         self.width_spin.setValue(AppConstants.DEFAULT_CANVAS_WIDTH)
@@ -274,24 +339,24 @@ class PixelDrawingApp(QMainWindow):
         size_layout.addLayout(width_layout)
         
         height_layout = QHBoxLayout()
-        height_layout.addWidget(QLabel("Height:"))
+        height_layout.addWidget(QLabel(tr_panel("height_label")))
         self.height_spin = QSpinBox()
         self.height_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
         self.height_spin.setValue(AppConstants.DEFAULT_CANVAS_HEIGHT)
         height_layout.addWidget(self.height_spin)
         size_layout.addLayout(height_layout)
         
-        resize_btn = QPushButton("Resize Canvas")
+        resize_btn = QPushButton(tr_panel("resize_canvas"))
         resize_btn.clicked.connect(self.resize_canvas)
         size_layout.addWidget(resize_btn)
         
         side_layout.addWidget(size_group)
         
         # Actions group
-        actions_group = QGroupBox("Actions")
+        actions_group = QGroupBox(tr_panel("actions_group"))
         actions_layout = QVBoxLayout(actions_group)
         
-        clear_btn = QPushButton("Clear Canvas")
+        clear_btn = QPushButton(tr_panel("clear_canvas"))
         clear_btn.clicked.connect(self.clear_canvas)
         actions_layout.addWidget(clear_btn)
         
@@ -302,7 +367,7 @@ class PixelDrawingApp(QMainWindow):
     
     def create_color_panel(self, parent_layout) -> None:
         """Create the color selection panel."""
-        color_group = QGroupBox("Color")
+        color_group = QGroupBox(tr_panel("color_group"))
         color_layout = QVBoxLayout(color_group)
         
         # Current color display
@@ -312,12 +377,12 @@ class PixelDrawingApp(QMainWindow):
         color_layout.addWidget(self.color_display, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # Color chooser button
-        choose_btn = QPushButton("Choose Color")
+        choose_btn = QPushButton(tr_panel("choose_color"))
         choose_btn.clicked.connect(self.choose_color)
         color_layout.addWidget(choose_btn)
         
         # Recent colors in compact grid
-        recent_label = QLabel("Recent Colors:")
+        recent_label = QLabel(tr_panel("recent_colors"))
         recent_label.setFont(QFont("Arial", 8))
         color_layout.addWidget(recent_label)
         
@@ -374,7 +439,7 @@ class PixelDrawingApp(QMainWindow):
     
     def choose_color(self) -> None:
         """Open color chooser dialog."""
-        color = QColorDialog.getColor(self.current_color, self, "Choose Color")
+        color = QColorDialog.getColor(self.current_color, self, tr_dialog("choose_color_title"))
         if color.isValid():
             self.set_color(color, add_to_recent=True)
     
@@ -382,7 +447,7 @@ class PixelDrawingApp(QMainWindow):
     def new_file(self) -> None:
         """Create a new file."""
         if self._model.is_modified:
-            reply = QMessageBox.question(self, "New File", "Are you sure? Unsaved changes will be lost.")
+            reply = QMessageBox.question(self, tr_dialog("new_file_title"), tr_dialog("new_file_message"))
             if reply != QMessageBox.StandardButton.Yes:
                 return
         
@@ -402,11 +467,11 @@ class PixelDrawingApp(QMainWindow):
         # Update UI
         self.width_spin.setValue(self._model.width)
         self.height_spin.setValue(self._model.height)
-        self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
+        self.setWindowTitle(tr_window("app_title"))
     
     def open_file(self) -> None:
         """Open a pixel art file."""
-        file_path, _ = QFileDialog.getOpenFileName(self, "Open Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
+        file_path, _ = QFileDialog.getOpenFileName(self, tr_dialog("open_file_title"), "", tr_filter(AppConstants.PROJECT_FILE_FILTER))
         
         if file_path:
             self._file_service.load_file(file_path, self._model)
@@ -420,14 +485,14 @@ class PixelDrawingApp(QMainWindow):
     
     def save_as_file(self) -> None:
         """Save with a new filename."""
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Pixel Art File", "", AppConstants.PROJECT_FILE_FILTER)
+        file_path, _ = QFileDialog.getSaveFileName(self, tr_dialog("save_file_title"), "", tr_filter(AppConstants.PROJECT_FILE_FILTER))
         
         if file_path:
             self._file_service.save_file(file_path, self._model)
     
     def export_png(self) -> None:
         """Export as PNG image."""
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export as PNG", "", AppConstants.PNG_FILE_FILTER)
+        file_path, _ = QFileDialog.getSaveFileName(self, tr_dialog("export_png_title"), "", tr_filter(AppConstants.PNG_FILE_FILTER))
         
         if file_path:
             self._file_service.export_png(file_path, self._model)
@@ -443,8 +508,8 @@ class PixelDrawingApp(QMainWindow):
             if new_width > AppConstants.LARGE_CANVAS_THRESHOLD or new_height > AppConstants.LARGE_CANVAS_THRESHOLD:
                 reply = QMessageBox.question(
                     self, 
-                    "Large Canvas", 
-                    f"Canvas size {new_width}x{new_height} may affect performance. Continue?",
+                    tr_dialog("large_canvas_title"), 
+                    tr_dialog("large_canvas_message", width=new_width, height=new_height),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.No
                 )
@@ -453,19 +518,19 @@ class PixelDrawingApp(QMainWindow):
             
             # Perform resize through model
             self._model.resize(new_width, new_height)
-            self.statusBar().showMessage(f"Canvas resized to {new_width}x{new_height}")
+            self.statusBar().showMessage(tr_status("canvas_resized", width=new_width, height=new_height))
             
         except ValidationError as e:
             from ..utils.logging import log_warning
             log_warning("ui", f"Canvas resize validation failed: {str(e)}")
-            QMessageBox.warning(self, "Invalid Dimensions", str(e))
+            QMessageBox.warning(self, tr_dialog("invalid_dimensions_title"), str(e))
             # Reset spinboxes to current canvas size
             self.width_spin.setValue(self._model.width)
             self.height_spin.setValue(self._model.height)
     
     def clear_canvas(self) -> None:
         """Clear the canvas."""
-        reply = QMessageBox.question(self, "Clear Canvas", "Are you sure you want to clear the canvas?")
+        reply = QMessageBox.question(self, tr_dialog("clear_canvas_title"), tr_dialog("clear_canvas_message"))
         if reply == QMessageBox.StandardButton.Yes:
             self._model.clear()
     
@@ -483,12 +548,12 @@ class PixelDrawingApp(QMainWindow):
     
     def _on_tool_changed(self, tool_id: str) -> None:
         """Handle tool changes."""
-        self.statusBar().showMessage(f"Tool: {tool_id}")
+        self.statusBar().showMessage(tr_status("tool_changed", tool_id=tool_id))
     
     def _on_pixel_hovered(self, x: int, y: int) -> None:
         """Handle pixel hover events."""
         color = self._model.get_pixel(x, y)
-        self.statusBar().showMessage(f"Pixel ({x}, {y}): {color.name().upper()}")
+        self.statusBar().showMessage(tr_status("pixel_info", x=x, y=y, color=color.name().upper()))
     
     def _on_model_loaded(self) -> None:
         """Handle model loaded."""
@@ -502,28 +567,54 @@ class PixelDrawingApp(QMainWindow):
     
     def _on_model_saved(self, file_path: str) -> None:
         """Handle model saved."""
-        self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
+        self.setWindowTitle(tr_window("app_with_file", filename=os.path.basename(file_path)))
     
     def _on_file_loaded(self, file_path: str) -> None:
         """Handle file loaded successfully."""
-        self.statusBar().showMessage(f"Opened: {os.path.basename(file_path)}")
-        self.setWindowTitle(f"Pixel Drawing - {os.path.basename(file_path)}")
+        self.statusBar().showMessage(tr_status("file_opened", filename=os.path.basename(file_path)))
+        self.setWindowTitle(tr_window("app_with_file", filename=os.path.basename(file_path)))
     
     def _on_file_saved(self, file_path: str) -> None:
         """Handle file saved successfully."""
-        self.statusBar().showMessage(f"Saved: {os.path.basename(file_path)}")
-        QMessageBox.information(self, "Success", "File saved successfully!")
+        self.statusBar().showMessage(tr_status("file_saved", filename=os.path.basename(file_path)))
+        QMessageBox.information(self, tr_dialog("success_title"), tr_dialog("file_saved_message"))
     
     def _on_file_exported(self, file_path: str) -> None:
         """Handle file exported successfully."""
-        self.statusBar().showMessage(f"Exported: {os.path.basename(file_path)}")
-        QMessageBox.information(self, "Success", "PNG exported successfully!")
+        self.statusBar().showMessage(tr_status("file_exported", filename=os.path.basename(file_path)))
+        QMessageBox.information(self, tr_dialog("success_title"), tr_dialog("png_exported_message"))
     
     def _on_file_operation_failed(self, operation: str, error_message: str) -> None:
         """Handle file operation failures."""
         from ..utils.logging import log_error
         log_error("ui", f"File operation failed - {operation}: {error_message}")
-        QMessageBox.critical(self, f"{operation.title()} Error", error_message)
+        QMessageBox.critical(self, tr_dialog("error_title_template", operation=operation.title()), error_message)
+    
+    def show_preferences(self) -> None:
+        """Show the preferences dialog."""
+        dialog = PreferencesDialog(self)
+        dialog.settings_changed.connect(self._on_settings_changed)
+        dialog.language_changed.connect(self._on_language_preview)
+        dialog.exec()
+    
+    def _on_settings_changed(self, settings: dict) -> None:
+        """Handle settings changes from preferences dialog.
+        
+        Args:
+            settings: Dictionary of changed settings
+        """
+        # Handle any settings that need immediate application
+        # (language is already handled in the preferences dialog)
+        log_info("ui", f"Settings changed: {settings}")
+    
+    def _on_language_preview(self, language_code: str) -> None:
+        """Handle language preview changes.
+        
+        Args:
+            language_code: Language code for preview
+        """
+        # This could be used for live preview in the future
+        log_debug("ui", f"Language preview: {language_code}")
     
     def handle_pan_request(self, delta_x: int, delta_y: int) -> None:
         """Handle pan requests from canvas.

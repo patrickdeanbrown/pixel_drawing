@@ -8,6 +8,7 @@ from ..constants import AppConstants
 from ..validators import validate_canvas_dimensions
 from ..exceptions import ValidationError
 from ..commands import CommandHistory, SetPixelCommand
+from ..i18n import tr_error
 
 
 class PixelArtModel(QObject):
@@ -119,7 +120,7 @@ class PixelArtModel(QObject):
             ValidationError: If coordinates are out of bounds
         """
         if not (0 <= x < self._width and 0 <= y < self._height):
-            raise ValidationError(f"{AppConstants.ERROR_COORDS_OUT_OF_BOUNDS}: ({x}, {y})")
+            raise ValidationError(tr_error(AppConstants.ERROR_COORDS_OUT_OF_BOUNDS))
         
         return self._pixels.get((x, y), QColor(AppConstants.DEFAULT_BG_COLOR))
     
@@ -139,13 +140,13 @@ class PixelArtModel(QObject):
         """
         if not (0 <= x < self._width and 0 <= y < self._height):
             from ..utils.logging import log_error
-            error_msg = f"{AppConstants.ERROR_COORDS_OUT_OF_BOUNDS}: ({x}, {y})"
+            error_msg = tr_error(AppConstants.ERROR_COORDS_OUT_OF_BOUNDS)
             log_error("model", f"set_pixel validation failed: {error_msg}")
             raise ValidationError(error_msg)
         
         if not color.isValid():
             from ..utils.logging import log_error
-            error_msg = AppConstants.ERROR_INVALID_COLOR
+            error_msg = tr_error(AppConstants.ERROR_INVALID_COLOR)
             log_error("model", f"set_pixel validation failed: {error_msg} - {color}")
             raise ValidationError(error_msg)
         

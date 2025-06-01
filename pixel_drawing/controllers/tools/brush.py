@@ -6,6 +6,7 @@ from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
 from ...constants import AppConstants
+from ...i18n import tr_tool
 
 
 class BrushTool(DrawingTool):
@@ -22,7 +23,7 @@ class BrushTool(DrawingTool):
         Args:
             model: PixelArtModel to paint on
         """
-        super().__init__("Brush", model, shortcut="B")
+        super().__init__(tr_tool("brush"), model, shortcut="B")
         self._is_drawing = False
         self.set_icon_path(AppConstants.ICON_BRUSH)
     

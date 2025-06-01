@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QApplication
 
 from .views import PixelDrawingApp
 from .utils.logging import init_logging, shutdown_logging, log_info, log_error
+from .i18n import TranslationManager
 
 
 def main() -> None:
@@ -26,6 +27,11 @@ def main() -> None:
         app = QApplication(sys.argv)
         app.setApplicationName("Pixel Drawing")
         app.setOrganizationName("Pixel Drawing Team")
+        
+        # Initialize translation system
+        translation_manager = TranslationManager.instance()
+        translation_manager.initialize(app)
+        log_info("startup", "Translation system initialized")
         
         log_info("startup", "Creating main window")
         window = PixelDrawingApp()

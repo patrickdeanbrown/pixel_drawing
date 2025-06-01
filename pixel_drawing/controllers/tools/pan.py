@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QObject
 from .base import DrawingTool
 from ...models import PixelArtModel
 from ...constants import AppConstants
+from ...i18n import tr_tool
 
 
 class PanToolSignals(QObject):
@@ -30,7 +31,7 @@ class PanTool(DrawingTool):
         """
         # Use hand cursor for pan tool
         hand_cursor = QCursor(Qt.CursorShape.OpenHandCursor)
-        super().__init__("Pan", model, cursor=hand_cursor, shortcut="H")
+        super().__init__(tr_tool("pan"), model, cursor=hand_cursor, shortcut="H")
         self.set_icon_path(AppConstants.ICON_PAN)
         self.signals = PanToolSignals()
         self._is_panning = False

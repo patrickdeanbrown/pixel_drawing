@@ -6,6 +6,7 @@ from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
 from ...constants import AppConstants
+from ...i18n import tr_tool
 
 
 class FillTool(DrawingTool):
@@ -22,7 +23,7 @@ class FillTool(DrawingTool):
         Args:
             model: PixelArtModel to perform flood fill on
         """
-        super().__init__("Fill Bucket", model, shortcut="F")
+        super().__init__(tr_tool("fill"), model, shortcut="F")
         self.set_icon_path(AppConstants.ICON_FILL)
     
     def on_press(self, x: int, y: int, color: QColor) -> bool:

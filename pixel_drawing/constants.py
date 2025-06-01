@@ -40,9 +40,9 @@ class AppConstants:
     RECENT_COLORS_COUNT = 6
     LARGE_CANVAS_THRESHOLD = 256
     
-    # File formats
-    PROJECT_FILE_FILTER = "JSON files (*.json)"
-    PNG_FILE_FILTER = "PNG files (*.png)"
+    # File formats (now use i18n keys)
+    PROJECT_FILE_FILTER = "json_files"
+    PNG_FILE_FILTER = "png_files"
     
     # File extensions
     JSON_EXTENSION = ".json"
@@ -65,12 +65,12 @@ class AppConstants:
     # Icon preload sizes
     ICON_PRELOAD_SIZES = [16, 24, 32, 48]
     
-    # Error messages
-    ERROR_COORDS_OUT_OF_BOUNDS = "Coordinates out of bounds"
-    ERROR_INVALID_COLOR = "Invalid color"
-    ERROR_INVALID_DIMENSIONS = "Invalid canvas dimensions"
+    # Error messages (now use i18n keys)
+    ERROR_COORDS_OUT_OF_BOUNDS = "coords_out_of_bounds"
+    ERROR_INVALID_COLOR = "invalid_color"
+    ERROR_INVALID_DIMENSIONS = "invalid_dimensions"
     
-    # Status messages
-    STATUS_READY = "Ready"
-    STATUS_UNDONE = "Undone"
-    STATUS_REDONE = "Redone"
+    # Status messages (now use i18n keys)
+    STATUS_READY = "ready"
+    STATUS_UNDONE = "undone" 
+    STATUS_REDONE = "redone"

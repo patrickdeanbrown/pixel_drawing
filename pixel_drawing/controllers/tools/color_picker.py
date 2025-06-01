@@ -7,6 +7,7 @@ from .base import DrawingTool
 from ...models import PixelArtModel
 from ...exceptions import ValidationError
 from ...constants import AppConstants
+from ...i18n import tr_tool
 
 
 class ColorPickerToolSignals(QObject):
@@ -29,7 +30,7 @@ class ColorPickerTool(DrawingTool):
         Args:
             model: PixelArtModel to sample colors from
         """
-        super().__init__("Color Picker", model, shortcut="I")
+        super().__init__(tr_tool("color_picker"), model, shortcut="I")
         self.set_icon_path(AppConstants.ICON_COLOR_PICKER)
         self.signals = ColorPickerToolSignals()
         # Note: We'll need to connect the signal in the tool manager or main window

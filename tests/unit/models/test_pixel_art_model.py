@@ -98,8 +98,8 @@ class TestPixelOperations:
     
     def test_set_pixel_invalid_color(self, empty_model, test_colors):
         """Test setting pixel with invalid color raises ValidationError."""
-        invalid_color = QColor()  # Invalid color
-        invalid_color.setValid(False)
+        # Create an invalid color (QColor with invalid spec)
+        invalid_color = QColor(-1, -1, -1)  # Invalid RGB values create invalid color
         
         with pytest.raises(ValidationError, match="Invalid color"):
             empty_model.set_pixel(0, 0, invalid_color)
@@ -152,8 +152,8 @@ class TestFloodFill:
     
     def test_flood_fill_invalid_color(self, empty_model):
         """Test flood fill with invalid color raises ValidationError."""
-        invalid_color = QColor()
-        invalid_color.setValid(False)
+        # Create an invalid color (QColor with invalid spec)
+        invalid_color = QColor(-1, -1, -1)  # Invalid RGB values create invalid color
         
         with pytest.raises(ValidationError, match="Invalid fill color"):
             empty_model.flood_fill(0, 0, invalid_color)

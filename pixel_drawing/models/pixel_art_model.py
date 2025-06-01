@@ -66,8 +66,8 @@ class PixelArtModel(QObject):
         # Command-based undo/redo system
         self._command_history = CommandHistory(AppConstants.MAX_UNDO_HISTORY)
         
-        # Initialize with default background color
-        self.clear()
+        # Initialize with default background color (don't mark as modified)
+        self._pixels.clear()  # Start with empty pixels dict
     
     @property
     def width(self) -> int:

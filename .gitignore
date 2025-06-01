@@ -218,6 +218,7 @@ share/python-wheels/
 *.log
 *.db
 *.sqlite
+logs/
 
 # IDE and editor files
 *.sublime-project
@@ -236,3 +237,10 @@ share/python-wheels/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Windows Zone.Identifier files (from downloading files)
+*:Zone.Identifier
+*.Zone.Identifier
+
+# Claude Code directory
+.claude/

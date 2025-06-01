@@ -138,10 +138,16 @@ class PixelArtModel(QObject):
             ValidationError: If coordinates are out of bounds or color is invalid
         """
         if not (0 <= x < self._width and 0 <= y < self._height):
-            raise ValidationError(f"{AppConstants.ERROR_COORDS_OUT_OF_BOUNDS}: ({x}, {y})")
+            from ..utils.logging import log_error
+            error_msg = f"{AppConstants.ERROR_COORDS_OUT_OF_BOUNDS}: ({x}, {y})"
+            log_error("model", f"set_pixel validation failed: {error_msg}")
+            raise ValidationError(error_msg)
         
         if not color.isValid():
-            raise ValidationError(AppConstants.ERROR_INVALID_COLOR)
+            from ..utils.logging import log_error
+            error_msg = AppConstants.ERROR_INVALID_COLOR
+            log_error("model", f"set_pixel validation failed: {error_msg} - {color}")
+            raise ValidationError(error_msg)
         
         old_color = self.get_pixel(x, y)
         if old_color == color:
@@ -286,16 +292,27 @@ class PixelArtModel(QObject):
             ValidationError: If data format is invalid
         """
         # Validate data structure
+        from ..utils.logging import log_error, log_info
+        log_info("model", f"Loading model from dictionary data")
+        
         required_fields = ["width", "height", "pixels"]
         for field in required_fields:
             if field not in data:
-                raise ValidationError(f"Missing required field: {field}")
+                error_msg = f"Missing required field: {field}"
+                log_error("model", f"Model load validation failed: {error_msg}")
+                raise ValidationError(error_msg)
         
         width, height = data["width"], data["height"]
-        validate_canvas_dimensions(width, height)
+        try:
+            validate_canvas_dimensions(width, height)
+        except ValidationError as e:
+            log_error("model", f"Model load validation failed: {str(e)}")
+            raise
         
         if not isinstance(data["pixels"], dict):
-            raise ValidationError("Pixels data must be a dictionary")
+            error_msg = "Pixels data must be a dictionary"
+            log_error("model", f"Model load validation failed: {error_msg}")
+            raise ValidationError(error_msg)
         
         # Parse and validate pixel data
         new_pixels = {}
@@ -317,7 +334,9 @@ class PixelArtModel(QObject):
                 
                 new_pixels[(x, y)] = color
             except ValueError as e:
-                raise ValidationError(f"Invalid pixel data: {e}")
+                error_msg = f"Invalid pixel data: {e}"
+                log_error("model", f"Model load pixel validation failed: {error_msg}")
+                raise ValidationError(error_msg)
         
         # Apply loaded data
         old_width, old_height = self._width, self._height

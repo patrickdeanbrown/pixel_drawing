@@ -142,6 +142,9 @@ class PixelCanvas(QWidget):
         Uses dirty region tracking and cached pen objects for optimal
         rendering performance, especially on large canvases.
         """
+        import time
+        start_time = time.time()
+        
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         
@@ -169,6 +172,15 @@ class PixelCanvas(QWidget):
                 
                 # Draw grid lines (pen already set above for performance)
                 painter.drawRect(x1, y1, self.pixel_size, self.pixel_size)
+        
+        # Log rendering performance
+        duration_ms = (time.time() - start_time) * 1000
+        pixel_count = (end_x - start_x) * (end_y - start_y)
+        update_size = f"{update_rect.width()}x{update_rect.height()}"
+        
+        from ..utils.logging import log_performance
+        if duration_ms > 10:  # Only log slow renders
+            log_performance("canvas_render", duration_ms, f"Region: {update_size}, Pixels: {pixel_count}, Zoom: {self.pixel_size}x")
     
     def get_pixel_coords(self, pos: QPoint) -> Tuple[int, int]:
         """Convert widget coordinates to pixel grid coordinates."""

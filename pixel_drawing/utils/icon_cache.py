@@ -79,7 +79,8 @@ class IconCache:
                 return QIcon(icon_path)
         
         except Exception as e:
-            print(f"Warning: Failed to create icon from {icon_path}: {e}")
+            from .logging import log_warning
+            log_warning("icon_cache", f"Failed to create icon from {icon_path}: {e}")
             return None
     
     def preload_icons(self, icon_paths: Dict[str, str], sizes: Optional[List[int]] = None) -> None:

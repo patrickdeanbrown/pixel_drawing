@@ -90,7 +90,8 @@ class CursorManager:
             
         except Exception as e:
             # If cursor creation fails, return None to use default
-            print(f"Warning: Failed to create cursor from {icon_path}: {e}")
+            from .logging import log_warning
+            log_warning("cursors", f"Failed to create cursor from {icon_path}: {e}")
             return None
     
     def clear_cache(self) -> None:

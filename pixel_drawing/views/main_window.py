@@ -456,6 +456,8 @@ class PixelDrawingApp(QMainWindow):
             self.statusBar().showMessage(f"Canvas resized to {new_width}x{new_height}")
             
         except ValidationError as e:
+            from ..utils.logging import log_warning
+            log_warning("ui", f"Canvas resize validation failed: {str(e)}")
             QMessageBox.warning(self, "Invalid Dimensions", str(e))
             # Reset spinboxes to current canvas size
             self.width_spin.setValue(self._model.width)
@@ -519,6 +521,8 @@ class PixelDrawingApp(QMainWindow):
     
     def _on_file_operation_failed(self, operation: str, error_message: str) -> None:
         """Handle file operation failures."""
+        from ..utils.logging import log_error
+        log_error("ui", f"File operation failed - {operation}: {error_message}")
         QMessageBox.critical(self, f"{operation.title()} Error", error_message)
     
     def handle_pan_request(self, delta_x: int, delta_y: int) -> None:

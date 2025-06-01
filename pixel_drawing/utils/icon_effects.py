@@ -46,7 +46,8 @@ def create_colored_icon(svg_path: str, color: QColor, size: int = 24) -> Optiona
         return QIcon(colored_pixmap)
         
     except Exception as e:
-        print(f"Warning: Failed to create colored icon from {svg_path}: {e}")
+        from .logging import log_warning
+        log_warning("icon_effects", f"Failed to create colored icon from {svg_path}: {e}")
         return None
 
 
@@ -113,7 +114,8 @@ def create_icon_with_states(svg_path: str, size: int = 24) -> Optional[QIcon]:
         return icon
         
     except Exception as e:
-        print(f"Warning: Failed to create stateful icon from {svg_path}: {e}")
+        from .logging import log_warning
+        log_warning("icon_effects", f"Failed to create stateful icon from {svg_path}: {e}")
         return None
 
 

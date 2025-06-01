@@ -85,10 +85,15 @@ class ToolManager(QObject):
         """
         tool = self.get_tool(tool_id)
         if tool:
+            from ...utils.logging import log_debug
+            log_debug("tools", f"Tool changed to: {tool_id}")
             self._current_tool = tool
             self.tool_changed.emit(tool_id)
             return True
-        return False
+        else:
+            from ...utils.logging import log_warning
+            log_warning("tools", f"Failed to set unknown tool: {tool_id}")
+            return False
     
     @property
     def current_tool(self) -> Optional[DrawingTool]:
@@ -107,18 +112,32 @@ class ToolManager(QObject):
             True if tool should receive move events
         """
         if self._current_tool:
-            from ...utils.logging import log_tool_usage
+            from ...utils.logging import log_tool_usage, log_error
             tool_name = self._current_tool.name
             log_tool_usage(tool_name, "press", f"({x},{y})")
-            return self._current_tool.on_press(x, y, color)
+            try:
+                return self._current_tool.on_press(x, y, color)
+            except Exception as e:
+                log_error("tools", f"Tool {tool_name} press handler failed: {e}")
+                return False
         return False
     
     def handle_move(self, x: int, y: int, color: QColor) -> None:
         """Handle mouse move with current tool."""
         if self._current_tool:
-            self._current_tool.on_move(x, y, color)
+            try:
+                self._current_tool.on_move(x, y, color)
+            except Exception as e:
+                from ...utils.logging import log_error
+                tool_name = self._current_tool.name
+                log_error("tools", f"Tool {tool_name} move handler failed: {e}")
     
     def handle_release(self, x: int, y: int, color: QColor) -> None:
         """Handle mouse release with current tool."""
         if self._current_tool:
-            self._current_tool.on_release(x, y, color)
+            try:
+                self._current_tool.on_release(x, y, color)
+            except Exception as e:
+                from ...utils.logging import log_error
+                tool_name = self._current_tool.name
+                log_error("tools", f"Tool {tool_name} release handler failed: {e}")

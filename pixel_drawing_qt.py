@@ -348,6 +348,12 @@ class PixelArtModel(QObject):
         
         # Parse and validate pixel data
         new_pixels = {}
+        # Initialize all pixels with default background color first
+        for x in range(width):
+            for y in range(height):
+                new_pixels[(x, y)] = QColor(AppConstants.DEFAULT_BG_COLOR)
+        
+        # Then override with loaded pixel data
         for coord_str, color_str in data["pixels"].items():
             try:
                 x, y = map(int, coord_str.split(','))
@@ -363,10 +369,15 @@ class PixelArtModel(QObject):
                 raise ValidationError(f"Invalid pixel data: {e}")
         
         # Apply loaded data
+        old_width, old_height = self._width, self._height
         self._width = width
         self._height = height
         self._pixels = new_pixels
         self._is_modified = False
+        
+        # Emit appropriate signals
+        if old_width != width or old_height != height:
+            self.canvas_resized.emit(width, height)
         
         self.model_loaded.emit()
     
@@ -379,7 +390,7 @@ class PixelArtModel(QObject):
         return {
             "width": self._width,
             "height": self._height,
-            "pixels": {f"{x},{y}": color.name() for (x, y), color in self._pixels.items()}
+            "pixels": {f"{x},{y}": color.name().upper() for (x, y), color in self._pixels.items()}
         }
     
     def set_current_file(self, file_path: Optional[str]) -> None:
@@ -829,6 +840,10 @@ class FileService(QObject):
             True if successful, False otherwise
         """
         try:
+            # Ensure .json extension
+            if not file_path.lower().endswith('.json'):
+                file_path += '.json'
+            
             # Validate file path for writing
             validate_file_path(file_path, "write")
             
@@ -925,7 +940,7 @@ class ColorButton(QPushButton):
         """Update the button stylesheet with current color."""
         self.setStyleSheet(f"""
             QPushButton {{
-                background-color: {self.color.name()};
+                background-color: {self.color.name().upper()};
                 border: 1px solid {AppConstants.BORDER_COLOR};
                 border-radius: 2px;
             }}
@@ -966,11 +981,11 @@ class PixelDrawingApp(QMainWindow):
         # Apply modern styling
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #f0f0f0;
+                background-color: #F0F0F0;
             }
             QGroupBox {
                 font-weight: bold;
-                border: 2px solid #cccccc;
+                border: 2px solid #CCCCCC;
                 border-radius: 5px;
                 margin-top: 1ex;
                 padding-top: 5px;
@@ -981,18 +996,18 @@ class PixelDrawingApp(QMainWindow):
                 padding: 0 5px 0 5px;
             }
             QPushButton {
-                background-color: #ffffff;
-                border: 1px solid #cccccc;
+                background-color: #FFFFFF;
+                border: 1px solid #CCCCCC;
                 border-radius: 3px;
                 padding: 5px;
                 min-width: 60px;
             }
             QPushButton:hover {
-                background-color: #e6f3ff;
-                border-color: #0066cc;
+                background-color: #E6F3FF;
+                border-color: #0066CC;
             }
             QPushButton:pressed {
-                background-color: #cce7ff;
+                background-color: #CCE7FF;
             }
         """)
     
@@ -1146,7 +1161,7 @@ class PixelDrawingApp(QMainWindow):
         # Current color display
         self.color_display = QLabel()
         self.color_display.setFixedSize(AppConstants.COLOR_DISPLAY_WIDTH, AppConstants.COLOR_DISPLAY_HEIGHT)
-        self.color_display.setStyleSheet(f"background-color: {self.current_color.name()}; border: 1px solid #ccc;")
+        self.color_display.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
         color_layout.addWidget(self.color_display, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # Color chooser button
@@ -1189,7 +1204,7 @@ class PixelDrawingApp(QMainWindow):
         
         self.current_color = color
         self.canvas.current_color = color
-        self.color_display.setStyleSheet(f"background-color: {color.name()}; border: 1px solid #ccc;")
+        self.color_display.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
     
     def _on_recent_color_clicked(self, index: int, checked: bool = False) -> None:
         """Handle recent color button clicks."""
@@ -1327,13 +1342,17 @@ class PixelDrawingApp(QMainWindow):
     def _on_pixel_hovered(self, x: int, y: int) -> None:
         """Handle pixel hover events."""
         color = self._model.get_pixel(x, y)
-        self.statusBar().showMessage(f"Pixel ({x}, {y}): {color.name()}")
+        self.statusBar().showMessage(f"Pixel ({x}, {y}): {color.name().upper()}")
     
     def _on_model_loaded(self) -> None:
         """Handle model loaded."""
         # Update UI to reflect loaded model
         self.width_spin.setValue(self._model.width)
         self.height_spin.setValue(self._model.height)
+        
+        # Force canvas to update size and redraw
+        self.canvas._update_widget_size()
+        self.canvas.update()  # Full redraw of entire canvas
     
     def _on_model_saved(self, file_path: str) -> None:
         """Handle model saved."""

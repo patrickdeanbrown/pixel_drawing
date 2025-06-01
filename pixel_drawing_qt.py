@@ -126,7 +126,26 @@ def validate_file_path(file_path: str, operation: str = "access") -> None:
 
 
 class PixelArtModel(QObject):
-    """Data model for pixel art, managing canvas data and business logic."""
+    """Data model for pixel art, managing canvas data and business logic.
+    
+    This class implements the Model component of the MVC architecture, handling
+    all pixel data storage, manipulation, and business logic for the pixel art
+    application. It provides signals for UI updates and maintains the integrity
+    of the canvas data.
+    
+    Attributes:
+        width: Canvas width in pixels (read-only)
+        height: Canvas height in pixels (read-only) 
+        current_file: Path to currently loaded file (read-only)
+        is_modified: Whether the model has unsaved changes (read-only)
+        
+    Signals:
+        pixel_changed(int, int, QColor): Emitted when a pixel color changes
+        canvas_resized(int, int): Emitted when canvas dimensions change
+        canvas_cleared(): Emitted when canvas is cleared
+        model_loaded(): Emitted when a file is loaded into the model
+        model_saved(str): Emitted when model is saved to file
+    """
     
     # Signals for model changes
     pixel_changed = pyqtSignal(int, int, QColor)  # x, y, new_color
@@ -137,11 +156,18 @@ class PixelArtModel(QObject):
     
     def __init__(self, width: int = AppConstants.DEFAULT_CANVAS_WIDTH, 
                  height: int = AppConstants.DEFAULT_CANVAS_HEIGHT):
-        """Initialize the pixel art model.
+        """Initialize the pixel art model with specified dimensions.
+        
+        Creates a new pixel art model with the given canvas dimensions and
+        initializes all pixels to the default background color. Sets up
+        internal state for tracking modifications and file associations.
         
         Args:
-            width: Canvas width in pixels
-            height: Canvas height in pixels
+            width: Canvas width in pixels (1-256, default: 32)
+            height: Canvas height in pixels (1-256, default: 32)
+            
+        Raises:
+            ValidationError: If width or height are outside valid range
         """
         super().__init__()
         validate_canvas_dimensions(width, height)
@@ -157,22 +183,38 @@ class PixelArtModel(QObject):
     
     @property
     def width(self) -> int:
-        """Get canvas width."""
+        """Get canvas width in pixels.
+        
+        Returns:
+            int: Canvas width (1-256 pixels)
+        """
         return self._width
     
     @property
     def height(self) -> int:
-        """Get canvas height."""
+        """Get canvas height in pixels.
+        
+        Returns:
+            int: Canvas height (1-256 pixels)
+        """
         return self._height
     
     @property
     def current_file(self) -> Optional[str]:
-        """Get current file path."""
+        """Get path to currently loaded file.
+        
+        Returns:
+            Optional[str]: File path if a file is loaded, None otherwise
+        """
         return self._current_file
     
     @property
     def is_modified(self) -> bool:
-        """Check if model has unsaved changes."""
+        """Check if model has unsaved changes.
+        
+        Returns:
+            bool: True if there are unsaved changes, False otherwise
+        """
         return self._is_modified
     
     def get_pixel(self, x: int, y: int) -> QColor:
@@ -217,7 +259,13 @@ class PixelArtModel(QObject):
         if old_color == color:
             return False
         
-        self._pixels[(x, y)] = QColor(color)
+        # Memory optimization: remove default color pixels instead of storing them
+        default_color = QColor(AppConstants.DEFAULT_BG_COLOR)
+        if color == default_color:
+            self._pixels.pop((x, y), None)  # Remove if exists
+        else:
+            self._pixels[(x, y)] = QColor(color)
+        
         self._is_modified = True
         self.pixel_changed.emit(x, y, color)
         return True
@@ -231,11 +279,14 @@ class PixelArtModel(QObject):
         return self._pixels.copy()
     
     def clear(self) -> None:
-        """Clear canvas to default background color."""
+        """Clear entire canvas to default background color.
+        
+        Resets all pixels to the default background color (white) and marks
+        the model as modified. Emits canvas_cleared signal to notify UI.
+        Uses memory optimization by not storing default color pixels.
+        """
+        # Memory optimization: don't store default color pixels
         self._pixels.clear()
-        for x in range(self._width):
-            for y in range(self._height):
-                self._pixels[(x, y)] = QColor(AppConstants.DEFAULT_BG_COLOR)
         
         self._is_modified = True
         self.canvas_cleared.emit()
@@ -609,7 +660,24 @@ class ToolManager:
 
 
 class PixelCanvas(QWidget):
-    """Canvas widget for pixel art drawing with grid and zoom functionality."""
+    """Interactive canvas widget for pixel art drawing and editing.
+    
+    This widget provides the visual interface for pixel art creation, handling
+    mouse interactions, rendering the pixel grid, and coordinating with drawing
+    tools. It implements the View component of the MVC architecture.
+    
+    Features:
+        - Real-time pixel drawing with brush and fill tools
+        - Grid-based display with configurable pixel size
+        - Mouse tracking for pixel coordinate display
+        - Optimized rendering with partial update regions
+        - Tool management and selection
+        
+    Signals:
+        color_used(QColor): Emitted when a color is applied to canvas
+        tool_changed(str): Emitted when active drawing tool changes  
+        pixel_hovered(int, int): Emitted when mouse hovers over pixel coordinates
+    """
     
     # Signals for decoupled communication
     color_used = pyqtSignal(QColor)  # Emitted when a color is actually used on canvas
@@ -617,12 +685,16 @@ class PixelCanvas(QWidget):
     pixel_hovered = pyqtSignal(int, int)  # Emitted when mouse hovers over pixel
     
     def __init__(self, parent=None, model: Optional[PixelArtModel] = None, pixel_size: int = AppConstants.DEFAULT_PIXEL_SIZE):
-        """Initialize pixel canvas.
+        """Initialize pixel canvas with model and display settings.
+        
+        Sets up the canvas widget with the specified model and pixel size,
+        initializes tool management, and connects model signals for updates.
+        Enables mouse tracking for hover effects and coordinate display.
         
         Args:
-            parent: Parent widget
-            model: PixelArtModel to display and edit
-            pixel_size: Size of each pixel in screen pixels
+            parent: Parent widget (typically the main application window)
+            model: PixelArtModel to display and edit (creates default if None)
+            pixel_size: Size of each logical pixel in screen pixels (default: 16)
         """
         super().__init__(parent)
         self.pixel_size = pixel_size
@@ -647,6 +719,11 @@ class PixelCanvas(QWidget):
         
         # Enable mouse tracking
         self.setMouseTracking(True)
+        
+        # Performance optimizations
+        self._grid_pen = QPen(QColor(AppConstants.GRID_COLOR), 1)
+        self._cached_background = None
+        self._last_canvas_size = (0, 0)
     
     @property
     def model(self) -> PixelArtModel:
@@ -684,7 +761,11 @@ class PixelCanvas(QWidget):
         self.update()
     
     def paintEvent(self, event) -> None:
-        """Paint the pixel grid."""
+        """Paint the pixel grid with performance optimizations.
+        
+        Uses dirty region tracking and cached pen objects for optimal
+        rendering performance, especially on large canvases.
+        """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         
@@ -697,6 +778,9 @@ class PixelCanvas(QWidget):
         end_x = min(self._model.width, (update_rect.right() // self.pixel_size) + 1)
         end_y = min(self._model.height, (update_rect.bottom() // self.pixel_size) + 1)
         
+        # Performance optimization: batch similar operations
+        painter.setPen(self._grid_pen)
+        
         # Draw only the pixels in the update region
         for x in range(start_x, end_x):
             for y in range(start_y, end_y):
@@ -707,8 +791,7 @@ class PixelCanvas(QWidget):
                 # Fill pixel
                 painter.fillRect(x1, y1, self.pixel_size, self.pixel_size, color)
                 
-                # Draw grid lines
-                painter.setPen(QPen(QColor(AppConstants.GRID_COLOR), 1))
+                # Draw grid lines (pen already set above for performance)
                 painter.drawRect(x1, y1, self.pixel_size, self.pixel_size)
     
     def get_pixel_coords(self, pos: QPoint) -> Tuple[int, int]:
@@ -769,6 +852,30 @@ class PixelCanvas(QWidget):
             if 0 <= pixel_x < self._model.width and 0 <= pixel_y < self._model.height:
                 self._tool_manager.handle_release(pixel_x, pixel_y, self.current_color)
             self._is_drawing = False
+    
+    def wheelEvent(self, event) -> None:
+        """Handle mouse wheel events for zooming.
+        
+        Args:
+            event: QWheelEvent containing wheel delta and modifiers
+        """
+        # Only zoom when Ctrl is held
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            # Get wheel delta (positive = zoom in, negative = zoom out)
+            delta = event.angleDelta().y()
+            
+            # Calculate new pixel size
+            zoom_factor = 1.2 if delta > 0 else 1/1.2
+            new_pixel_size = max(4, min(64, int(self.pixel_size * zoom_factor)))
+            
+            if new_pixel_size != self.pixel_size:
+                self.pixel_size = new_pixel_size
+                self._update_widget_size()
+                self.update()
+                
+            event.accept()
+        else:
+            event.ignore()
     
     # Legacy methods for compatibility - delegate to model
     def clear_canvas(self) -> None:
@@ -928,7 +1035,18 @@ class FileService(QObject):
 
 
 class ColorButton(QPushButton):
-    """Custom color button with hover effects."""
+    """Custom color button widget with visual feedback and hover effects.
+    
+    A specialized QPushButton that displays a solid color and provides
+    visual feedback when hovered. Used in the recent colors palette to
+    allow quick color selection from previously used colors.
+    
+    Features:
+        - Displays solid color background
+        - Hover effects with border highlighting
+        - Automatic stylesheet updates when color changes
+        - Fixed size for consistent layout in color palette
+    """
     
     def __init__(self, color: QColor, parent=None):
         super().__init__(parent)
@@ -937,7 +1055,11 @@ class ColorButton(QPushButton):
         self._update_stylesheet()
     
     def _update_stylesheet(self) -> None:
-        """Update the button stylesheet with current color."""
+        """Update button appearance with current color and hover effects.
+        
+        Applies CSS styling to display the button's color as background
+        and configures hover state with border highlighting.
+        """
         self.setStyleSheet(f"""
             QPushButton {{
                 background-color: {self.color.name().upper()};
@@ -950,14 +1072,38 @@ class ColorButton(QPushButton):
         """)
     
     def set_color(self, color: QColor) -> None:
-        """Update the button color."""
+        """Update the button's displayed color.
+        
+        Args:
+            color: New color to display on the button
+        """
         self.color = color
         self._update_stylesheet()
 
 
 
 class PixelDrawingApp(QMainWindow):
-    """Main application class for the Pixel Drawing app."""
+    """Main application window for the Pixel Drawing application.
+    
+    This class implements the Controller and main View components of the MVC
+    architecture, coordinating between the pixel art model, canvas display,
+    and user interface elements. It manages the application lifecycle,
+    file operations, tool selection, and user interactions.
+    
+    Features:
+        - Complete pixel art creation and editing interface
+        - File operations (new, open, save, export)
+        - Tool selection (brush, fill bucket)
+        - Color selection with recent colors palette
+        - Canvas resizing and clearing
+        - Modern Qt-based UI with professional styling
+        
+    Architecture:
+        - Uses PixelArtModel for data management
+        - PixelCanvas for drawing interface
+        - FileService for I/O operations
+        - Signal/slot pattern for decoupled communication
+    """
     
     def __init__(self):
         super().__init__()
@@ -977,6 +1123,9 @@ class PixelDrawingApp(QMainWindow):
         self.setup_ui()
         self.setWindowTitle("Pixel Drawing - Retro Game Asset Creator")
         self.setMinimumSize(AppConstants.MIN_WINDOW_WIDTH, AppConstants.MIN_WINDOW_HEIGHT)
+        
+        # Set up keyboard shortcuts
+        self._setup_keyboard_shortcuts()
         
         # Apply modern styling
         self.setStyleSheet("""
@@ -1022,6 +1171,27 @@ class PixelDrawingApp(QMainWindow):
         self._file_service.file_saved.connect(self._on_file_saved)
         self._file_service.file_exported.connect(self._on_file_exported)
         self._file_service.operation_failed.connect(self._on_file_operation_failed)
+    
+    def _setup_keyboard_shortcuts(self) -> None:
+        """Set up keyboard shortcuts for common actions."""
+        from PyQt6.QtGui import QKeySequence, QShortcut
+        
+        # File operations
+        QShortcut(QKeySequence("Ctrl+N"), self, self.new_file)
+        QShortcut(QKeySequence("Ctrl+O"), self, self.open_file)
+        QShortcut(QKeySequence("Ctrl+S"), self, self.save_file)
+        QShortcut(QKeySequence("Ctrl+Shift+S"), self, self.save_as_file)
+        QShortcut(QKeySequence("Ctrl+E"), self, self.export_png)
+        
+        # Tool shortcuts
+        QShortcut(QKeySequence("B"), self, lambda: self.set_tool("brush"))
+        QShortcut(QKeySequence("F"), self, lambda: self.set_tool("fill"))
+        
+        # Canvas operations
+        QShortcut(QKeySequence("Ctrl+Del"), self, self.clear_canvas)
+        
+        # Application shortcuts
+        QShortcut(QKeySequence("Ctrl+Q"), self, self.close)
     
     def setup_ui(self) -> None:
         """Set up the user interface."""

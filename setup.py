@@ -37,7 +37,7 @@ A cross-platform pixel art application for creating retro game assets.
 
 Run the application:
 ```bash
-python pixel_drawing.py
+python -m pixel_drawing
 ```
 
 ## Controls

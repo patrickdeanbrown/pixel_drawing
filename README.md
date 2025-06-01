@@ -50,7 +50,7 @@ A modern, cross-platform pixel art application built with Python and PyQt6 for c
 
 3. Run the application:
    ```bash
-   python pixel_drawing_qt.py
+   python -m pixel_drawing
    ```
 
 ### Alternative Installation

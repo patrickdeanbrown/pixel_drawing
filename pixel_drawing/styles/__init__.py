@@ -35,6 +35,14 @@ from .style_manager import (
     apply_danger_button_style
 )
 
+from .dialog_styles import (
+    ModernDialogStyler,
+    show_styled_file_dialog,
+    show_styled_color_dialog,
+    create_styled_file_dialog,
+    create_styled_color_dialog
+)
+
 __all__ = [
     # Design Constants
     'ModernDesignConstants',
@@ -52,6 +60,13 @@ __all__ = [
     'apply_primary_button_style',
     'apply_secondary_button_style',
     'apply_danger_button_style',
+    
+    # Dialog Styling
+    'ModernDialogStyler',
+    'show_styled_file_dialog',
+    'show_styled_color_dialog',
+    'create_styled_file_dialog',
+    'create_styled_color_dialog',
 ]
 
 # Version info

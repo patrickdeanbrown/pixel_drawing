@@ -35,6 +35,7 @@ from ..styles import (
     apply_secondary_button_style,
     apply_danger_button_style
 )
+from ..styles.dialog_styles import show_styled_file_dialog, show_styled_color_dialog
 
 
 class PixelDrawingApp(QMainWindow):
@@ -128,9 +129,8 @@ class PixelDrawingApp(QMainWindow):
         # Create side panel
         self.create_side_panel(main_layout)
         
-        # Create menu bar and toolbar  
+        # Create menu bar only (no toolbar for clean design)
         self.create_menu_bar()
-        self.create_toolbar()
         
         # Create status bar
         self.statusBar().showMessage(AppConstants.STATUS_READY)
@@ -292,70 +292,6 @@ class PixelDrawingApp(QMainWindow):
         preferences_action.setShortcut("Ctrl+,")
         preferences_action.triggered.connect(self.show_preferences)
     
-    def create_toolbar(self) -> None:
-        """Create the toolbar."""
-        toolbar = QToolBar()
-        self.addToolBar(toolbar)
-        
-        # File actions
-        new_action = QAction(tr_toolbar("new"), self)
-        new_action.triggered.connect(self.new_file)
-        toolbar.addAction(new_action)
-        
-        open_action = QAction(tr_toolbar("open"), self)
-        open_action.triggered.connect(self.open_file)
-        toolbar.addAction(open_action)
-        
-        save_action = QAction(tr_toolbar("save"), self)
-        save_action.triggered.connect(self.save_file)
-        toolbar.addAction(save_action)
-        
-        save_as_action = QAction(tr_toolbar("save_as"), self)
-        save_as_action.triggered.connect(self.save_as_file)
-        toolbar.addAction(save_as_action)
-        
-        toolbar.addSeparator()
-        
-        export_action = QAction(tr_toolbar("export_png"), self)
-        export_action.triggered.connect(self.export_png)
-        toolbar.addAction(export_action)
-        
-        toolbar.addSeparator()
-        
-        # Undo/Redo actions
-        undo_action = QAction(tr_toolbar("undo"), self)
-        undo_action.setShortcut("Ctrl+Z")
-        undo_action.triggered.connect(self.undo)
-        toolbar.addAction(undo_action)
-        
-        redo_action = QAction(tr_toolbar("redo"), self)
-        redo_action.setShortcut("Ctrl+Y")
-        redo_action.triggered.connect(self.redo)
-        toolbar.addAction(redo_action)
-        
-        toolbar.addSeparator()
-        
-        # Color display in toolbar
-        color_widget = QWidget()
-        color_layout = QHBoxLayout(color_widget)
-        color_layout.setContentsMargins(5, 0, 5, 0)
-        
-        # Current color display (larger, clickable)
-        self.toolbar_current_color = QPushButton()
-        self.toolbar_current_color.setFixedSize(AppConstants.TOOLBAR_COLOR_BUTTON_WIDTH, AppConstants.TOOLBAR_COLOR_BUTTON_HEIGHT)
-        self.toolbar_current_color.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
-        self.toolbar_current_color.setToolTip(tr_panel("current_color_tooltip"))
-        self.toolbar_current_color.clicked.connect(self.choose_color)
-        color_layout.addWidget(self.toolbar_current_color)
-        
-        # Background color display (smaller, informational)
-        self.toolbar_bg_color = QLabel()
-        self.toolbar_bg_color.setFixedSize(AppConstants.TOOLBAR_BG_COLOR_WIDTH, AppConstants.TOOLBAR_BG_COLOR_HEIGHT)
-        self.toolbar_bg_color.setStyleSheet(f"background-color: {AppConstants.DEFAULT_BG_COLOR}; border: 1px solid #CCCCCC;")
-        self.toolbar_bg_color.setToolTip(tr_panel("background_color_tooltip"))
-        color_layout.addWidget(self.toolbar_bg_color)
-        
-        toolbar.addWidget(color_widget)
     
     def create_side_panel(self, main_layout) -> None:
         """Create the modern unified side panel with tools and options."""
@@ -376,18 +312,19 @@ class PixelDrawingApp(QMainWindow):
         tools_layout = QGridLayout(tools_group)  # Changed to grid layout
         tools_layout.setSpacing(ModernDesignConstants.TOOL_GRID_SPACING)
         
-        # Create tool buttons dynamically from tool manager
+        # Create tool buttons in 2x2 grid to match reference design
         self.tool_buttons = {}
-        tool_configs = {
-            ToolType.BRUSH.value: {"icon": AppConstants.ICON_BRUSH, "tooltip": tr_tool("brush_tooltip"), "checked": True},
-            ToolType.FILL.value: {"icon": AppConstants.ICON_FILL, "tooltip": tr_tool("fill_tooltip"), "checked": False},
-            ToolType.ERASER.value: {"icon": AppConstants.ICON_ERASER, "tooltip": tr_tool("eraser_tooltip"), "checked": False},
-            ToolType.COLOR_PICKER.value: {"icon": AppConstants.ICON_COLOR_PICKER, "tooltip": tr_tool("color_picker_tooltip"), "checked": False},
-            ToolType.PAN.value: {"icon": AppConstants.ICON_PAN, "tooltip": tr_tool("pan_tooltip"), "checked": False}
-        }
         
-        row, col = 0, 0
-        for tool_id, config in tool_configs.items():
+        # Only show 4 main tools in 2x2 grid as per reference
+        main_tools = [
+            (ToolType.BRUSH.value, {"icon": AppConstants.ICON_BRUSH, "tooltip": tr_tool("brush_tooltip"), "checked": True}),
+            (ToolType.FILL.value, {"icon": AppConstants.ICON_FILL, "tooltip": tr_tool("fill_tooltip"), "checked": False}),
+            (ToolType.ERASER.value, {"icon": AppConstants.ICON_ERASER, "tooltip": tr_tool("eraser_tooltip"), "checked": False}),
+            (ToolType.PAN.value, {"icon": AppConstants.ICON_PAN, "tooltip": tr_tool("pan_tooltip"), "checked": False})
+        ]
+        
+        # Create 2x2 grid exactly like reference
+        for i, (tool_id, config) in enumerate(main_tools):
             btn = QPushButton()
             
             # Apply modern tool button styling
@@ -406,13 +343,11 @@ class PixelDrawingApp(QMainWindow):
             btn.clicked.connect(partial(self.set_tool, tool_id))
             
             self.tool_buttons[tool_id] = btn
-            tools_layout.addWidget(btn, row, col)
             
-            # Arrange in 2-column grid
-            col += 1
-            if col >= ModernDesignConstants.TOOL_GRID_COLUMNS:
-                col = 0
-                row += 1
+            # Arrange in 2x2 grid: row = i // 2, col = i % 2
+            row = i // 2
+            col = i % 2
+            tools_layout.addWidget(btn, row, col)
         
         side_layout.addWidget(tools_group)
         
@@ -600,9 +535,7 @@ class PixelDrawingApp(QMainWindow):
             """
         )
         
-        # Update toolbar color display
-        if hasattr(self, 'toolbar_current_color'):
-            self.toolbar_current_color.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
+        # Toolbar removed for clean design
     
     def _on_recent_color_clicked(self, index: int, checked: bool = False) -> None:
         """Handle recent color button clicks."""
@@ -618,8 +551,8 @@ class PixelDrawingApp(QMainWindow):
     
     def choose_color(self) -> None:
         """Open color chooser dialog."""
-        color = QColorDialog.getColor(self.current_color, self, tr_dialog("choose_color_title"))
-        if color.isValid():
+        color = show_styled_color_dialog(self.current_color, self)
+        if color and color.isValid():
             self.set_color(color, add_to_recent=True)
     
     
@@ -650,7 +583,13 @@ class PixelDrawingApp(QMainWindow):
     
     def open_file(self) -> None:
         """Open a pixel art file."""
-        file_path, _ = QFileDialog.getOpenFileName(self, tr_dialog("open_file_title"), "", tr_filter(AppConstants.PROJECT_FILE_FILTER))
+        file_path, _ = show_styled_file_dialog(
+            parent=self,
+            caption=tr_dialog("open_file_title"),
+            directory="",
+            filter=tr_filter(AppConstants.PROJECT_FILE_FILTER),
+            mode="open"
+        )
         
         if file_path:
             self._file_service.load_file(file_path, self._model)
@@ -664,14 +603,26 @@ class PixelDrawingApp(QMainWindow):
     
     def save_as_file(self) -> None:
         """Save with a new filename."""
-        file_path, _ = QFileDialog.getSaveFileName(self, tr_dialog("save_file_title"), "", tr_filter(AppConstants.PROJECT_FILE_FILTER))
+        file_path, _ = show_styled_file_dialog(
+            parent=self,
+            caption=tr_dialog("save_file_title"),
+            directory="",
+            filter=tr_filter(AppConstants.PROJECT_FILE_FILTER),
+            mode="save"
+        )
         
         if file_path:
             self._file_service.save_file(file_path, self._model)
     
     def export_png(self) -> None:
         """Export as PNG image."""
-        file_path, _ = QFileDialog.getSaveFileName(self, tr_dialog("export_png_title"), "", tr_filter(AppConstants.PNG_FILE_FILTER))
+        file_path, _ = show_styled_file_dialog(
+            parent=self,
+            caption=tr_dialog("export_png_title"),
+            directory="",
+            filter=tr_filter(AppConstants.PNG_FILE_FILTER),
+            mode="save"
+        )
         
         if file_path:
             self._file_service.export_png(file_path, self._model)

@@ -28,6 +28,13 @@ from ..utils.icon_effects import get_tool_icon
 from ..utils.logging import log_info, log_debug
 from ..enums import ToolType
 from ..i18n import tr_window, tr_toolbar, tr_panel, tr_dialog, tr_status, tr_filter, tr_tool
+from ..styles import (
+    ModernDesignConstants, 
+    apply_tool_button_style, 
+    apply_primary_button_style,
+    apply_secondary_button_style,
+    apply_danger_button_style
+)
 
 
 class PixelDrawingApp(QMainWindow):
@@ -75,38 +82,7 @@ class PixelDrawingApp(QMainWindow):
         # Set up keyboard shortcuts using utility function
         setup_keyboard_shortcuts(self)
         
-        # Apply modern styling
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #F0F0F0;
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #CCCCCC;
-                border-radius: 5px;
-                margin-top: 1ex;
-                padding-top: 5px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-            QPushButton {
-                background-color: #FFFFFF;
-                border: 1px solid #CCCCCC;
-                border-radius: 3px;
-                padding: 5px;
-                min-width: 60px;
-            }
-            QPushButton:hover {
-                background-color: #E6F3FF;
-                border-color: #0066CC;
-            }
-            QPushButton:pressed {
-                background-color: #CCE7FF;
-            }
-        """)
+        # Modern styling will be applied by style manager
     
     def _setup_connections(self) -> None:
         """Set up signal/slot connections between components."""
@@ -285,14 +261,23 @@ class PixelDrawingApp(QMainWindow):
         toolbar.addWidget(color_widget)
     
     def create_side_panel(self, main_layout) -> None:
-        """Create the side panel with tools and options."""
+        """Create the modern unified side panel with tools and options."""
         side_panel = QWidget()
-        side_panel.setMaximumWidth(AppConstants.SIDE_PANEL_WIDTH)
+        side_panel.setObjectName("sidePanel")
+        side_panel.setFixedWidth(ModernDesignConstants.SIDE_PANEL_WIDTH)
         side_layout = QVBoxLayout(side_panel)
+        side_layout.setSpacing(ModernDesignConstants.SPACING_LG)
+        side_layout.setContentsMargins(
+            ModernDesignConstants.SPACING_MD,
+            ModernDesignConstants.SPACING_LG, 
+            ModernDesignConstants.SPACING_MD,
+            ModernDesignConstants.SPACING_LG
+        )
         
-        # Tools group
+        # Tools section
         tools_group = QGroupBox(tr_panel("tools_group"))
-        tools_layout = QVBoxLayout(tools_group)
+        tools_layout = QGridLayout(tools_group)  # Changed to grid layout
+        tools_layout.setSpacing(ModernDesignConstants.TOOL_GRID_SPACING)
         
         # Create tool buttons dynamically from tool manager
         self.tool_buttons = {}
@@ -304,22 +289,33 @@ class PixelDrawingApp(QMainWindow):
             ToolType.PAN.value: {"icon": AppConstants.ICON_PAN, "tooltip": tr_tool("pan_tooltip"), "checked": False}
         }
         
+        row, col = 0, 0
         for tool_id, config in tool_configs.items():
             btn = QPushButton()
-            icon = get_tool_icon(config["icon"], AppConstants.ICON_SIZE)
+            
+            # Apply modern tool button styling
+            apply_tool_button_style(btn)
+            
+            icon = get_tool_icon(config["icon"], ModernDesignConstants.ICON_SIZE_TOOL)
             if icon:
                 btn.setIcon(icon)
-                log_debug("ui", f"Created tool button for {tool_id} with stateful icon")
-            btn.setIconSize(QSize(AppConstants.ICON_SIZE, AppConstants.ICON_SIZE))
+                log_debug("ui", f"Created tool button for {tool_id} with modern styling")
+            
+            btn.setIconSize(QSize(ModernDesignConstants.ICON_SIZE_TOOL, ModernDesignConstants.ICON_SIZE_TOOL))
             btn.setCheckable(True)
             btn.setChecked(config["checked"])
             btn.setToolTip(config["tooltip"])
-            btn.setFixedSize(AppConstants.ICON_SIZE + 16, AppConstants.ICON_SIZE + 16)
+            btn.setFixedSize(ModernDesignConstants.TOOL_BUTTON_SIZE, ModernDesignConstants.TOOL_BUTTON_SIZE)
             btn.clicked.connect(partial(self.set_tool, tool_id))
-            # Add hover animation properties
-            self._setup_button_animations(btn)
+            
             self.tool_buttons[tool_id] = btn
-            tools_layout.addWidget(btn)
+            tools_layout.addWidget(btn, row, col)
+            
+            # Arrange in 2-column grid
+            col += 1
+            if col >= ModernDesignConstants.TOOL_GRID_COLUMNS:
+                col = 0
+                row += 1
         
         side_layout.addWidget(tools_group)
         
@@ -329,24 +325,40 @@ class PixelDrawingApp(QMainWindow):
         # Canvas size group
         size_group = QGroupBox(tr_panel("canvas_size_group"))
         size_layout = QVBoxLayout(size_group)
+        size_layout.setSpacing(ModernDesignConstants.SPACING_MD)
         
+        # Width control
         width_layout = QHBoxLayout()
-        width_layout.addWidget(QLabel(tr_panel("width_label")))
+        width_label = QLabel(tr_panel("width_label"))
+        width_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_PRIMARY}; font-weight: {ModernDesignConstants.FONT_WEIGHT_MEDIUM};")
+        width_layout.addWidget(width_label)
+        
         self.width_spin = QSpinBox()
         self.width_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
         self.width_spin.setValue(AppConstants.DEFAULT_CANVAS_WIDTH)
+        self.width_spin.setFixedWidth(ModernDesignConstants.SPINBOX_WIDTH)
         width_layout.addWidget(self.width_spin)
+        width_layout.addStretch()
         size_layout.addLayout(width_layout)
         
+        # Height control
         height_layout = QHBoxLayout()
-        height_layout.addWidget(QLabel(tr_panel("height_label")))
+        height_label = QLabel(tr_panel("height_label"))
+        height_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_PRIMARY}; font-weight: {ModernDesignConstants.FONT_WEIGHT_MEDIUM};")
+        height_layout.addWidget(height_label)
+        
         self.height_spin = QSpinBox()
         self.height_spin.setRange(AppConstants.MIN_CANVAS_SIZE, AppConstants.MAX_CANVAS_SIZE)
         self.height_spin.setValue(AppConstants.DEFAULT_CANVAS_HEIGHT)
+        self.height_spin.setFixedWidth(ModernDesignConstants.SPINBOX_WIDTH)
         height_layout.addWidget(self.height_spin)
+        height_layout.addStretch()
         size_layout.addLayout(height_layout)
         
+        # Resize button
         resize_btn = QPushButton(tr_panel("resize_canvas"))
+        resize_btn.setObjectName("resizeCanvasButton")
+        apply_primary_button_style(resize_btn)
         resize_btn.clicked.connect(self.resize_canvas)
         size_layout.addWidget(resize_btn)
         
@@ -355,8 +367,11 @@ class PixelDrawingApp(QMainWindow):
         # Actions group
         actions_group = QGroupBox(tr_panel("actions_group"))
         actions_layout = QVBoxLayout(actions_group)
+        actions_layout.setSpacing(ModernDesignConstants.SPACING_MD)
         
         clear_btn = QPushButton(tr_panel("clear_canvas"))
+        clear_btn.setObjectName("clearCanvasButton")
+        apply_danger_button_style(clear_btn)
         clear_btn.clicked.connect(self.clear_canvas)
         actions_layout.addWidget(clear_btn)
         
@@ -366,40 +381,80 @@ class PixelDrawingApp(QMainWindow):
         main_layout.addWidget(side_panel)
     
     def create_color_panel(self, parent_layout) -> None:
-        """Create the color selection panel."""
+        """Create the modern color selection panel."""
         color_group = QGroupBox(tr_panel("color_group"))
         color_layout = QVBoxLayout(color_group)
+        color_layout.setSpacing(ModernDesignConstants.SPACING_MD)
         
-        # Current color display
-        self.color_display = QLabel()
-        self.color_display.setFixedSize(AppConstants.COLOR_DISPLAY_WIDTH, AppConstants.COLOR_DISPLAY_HEIGHT)
-        self.color_display.setStyleSheet(f"background-color: {self.current_color.name().upper()}; border: 1px solid #CCCCCC;")
+        # Large current color display - clickable
+        self.color_display = QPushButton()
+        self.color_display.setObjectName("largeColorDisplay")
+        self.color_display.setFixedSize(
+            ModernDesignConstants.LARGE_COLOR_DISPLAY_SIZE, 
+            ModernDesignConstants.LARGE_COLOR_DISPLAY_SIZE
+        )
+        self.color_display.setStyleSheet(
+            f"""
+            QPushButton#largeColorDisplay {{
+                background-color: {self.current_color.name().upper()};
+                border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
+                border-radius: {ModernDesignConstants.RADIUS_MEDIUM}px;
+            }}
+            QPushButton#largeColorDisplay:hover {{
+                border-color: {ModernDesignConstants.PRIMARY_PURPLE};
+                box-shadow: 0 2px 6px rgba(160, 32, 240, 0.2);
+            }}
+            """
+        )
+        self.color_display.setToolTip(tr_panel("current_color_tooltip"))
+        self.color_display.clicked.connect(self.choose_color)
         color_layout.addWidget(self.color_display, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # Color chooser button
         choose_btn = QPushButton(tr_panel("choose_color"))
+        apply_secondary_button_style(choose_btn)
         choose_btn.clicked.connect(self.choose_color)
         color_layout.addWidget(choose_btn)
         
-        # Recent colors in compact grid
+        # Recent colors section
         recent_label = QLabel(tr_panel("recent_colors"))
-        recent_label.setFont(QFont("Arial", 8))
+        recent_label.setObjectName("sectionSubtitle")
+        recent_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_SECONDARY}; font-size: {ModernDesignConstants.FONT_SIZE_SMALL}px;")
         color_layout.addWidget(recent_label)
         
+        # Recent colors in modern grid
         self.recent_buttons = []
         recent_layout = QGridLayout()
-        recent_layout.setSpacing(2)  # Tight spacing for compact look
+        recent_layout.setSpacing(ModernDesignConstants.COLOR_GRID_SPACING)
         
-        # Arrange in 3x2 grid
-        for i in range(AppConstants.RECENT_COLORS_COUNT):
+        # Arrange in 3x2 grid with modern styling
+        for i in range(ModernDesignConstants.RECENT_COLORS_COUNT):
             btn = ColorButton(self.recent_colors[i])
+            btn.setFixedSize(ModernDesignConstants.COLOR_SWATCH_SIZE, ModernDesignConstants.COLOR_SWATCH_SIZE)
+            btn.setStyleSheet(
+                f"""
+                QPushButton {{
+                    border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
+                    border-radius: {ModernDesignConstants.RADIUS_SMALL}px;
+                }}
+                QPushButton:hover {{
+                    border-color: {ModernDesignConstants.PRIMARY_PURPLE};
+                    box-shadow: 0 2px 4px rgba(160, 32, 240, 0.2);
+                }}
+                """
+            )
             btn.clicked.connect(partial(self._on_recent_color_clicked, i))
             self.recent_buttons.append(btn)
-            row = i // 3
-            col = i % 3
+            
+            row = i // ModernDesignConstants.COLOR_GRID_COLUMNS
+            col = i % ModernDesignConstants.COLOR_GRID_COLUMNS
             recent_layout.addWidget(btn, row, col)
         
-        color_layout.addLayout(recent_layout)
+        # Add recent colors container
+        recent_container = QWidget()
+        recent_container.setObjectName("recentColorsGrid")
+        recent_container.setLayout(recent_layout)
+        color_layout.addWidget(recent_container)
         
         parent_layout.addWidget(color_group)
     
@@ -420,7 +475,22 @@ class PixelDrawingApp(QMainWindow):
         
         self.current_color = color
         self.canvas.current_color = color
-        self.color_display.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
+        
+        # Update main color display with modern styling
+        self.color_display.setStyleSheet(
+            f"""
+            QPushButton#largeColorDisplay {{
+                background-color: {color.name().upper()};
+                border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
+                border-radius: {ModernDesignConstants.RADIUS_MEDIUM}px;
+            }}
+            QPushButton#largeColorDisplay:hover {{
+                border-color: {ModernDesignConstants.PRIMARY_PURPLE};
+                box-shadow: 0 2px 6px rgba(160, 32, 240, 0.2);
+            }}
+            """
+        )
+        
         # Update toolbar color display
         if hasattr(self, 'toolbar_current_color'):
             self.toolbar_current_color.setStyleSheet(f"background-color: {color.name().upper()}; border: 1px solid #CCCCCC;")
@@ -635,44 +705,6 @@ class PixelDrawingApp(QMainWindow):
         h_scroll.setValue(new_h)
         v_scroll.setValue(new_v)
     
-    def _setup_button_animations(self, button: QPushButton) -> None:
-        """Set up smooth hover animations for tool buttons.
-        
-        Args:
-            button: QPushButton to animate
-        """
-        # Enhanced button styling using Qt-compatible properties
-        button.setStyleSheet("""
-            QPushButton {
-                background-color: #FFFFFF;
-                border: 2px solid #CCCCCC;
-                border-radius: 6px;
-                padding: 3px;
-                margin: 1px;
-            }
-            QPushButton:hover {
-                background-color: #E6F3FF;
-                border-color: #0066CC;
-                border-width: 3px;
-                margin: 0px;
-            }
-            QPushButton:pressed {
-                background-color: #CCE7FF;
-                border: 1px solid #0066CC;
-                margin: 2px;
-            }
-            QPushButton:checked {
-                background-color: #0066CC;
-                border-color: #004499;
-                color: white;
-                font-weight: bold;
-            }
-            QPushButton:checked:hover {
-                background-color: #0077DD;
-                border-color: #0055AA;
-                border-width: 3px;
-            }
-        """)
     
     def undo(self) -> None:
         """Undo the last operation."""

@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QApplication
 from .views import PixelDrawingApp
 from .utils.logging import init_logging, shutdown_logging, log_info, log_error
 from .i18n import TranslationManager
+from .styles import initialize_style_manager, apply_modern_theme
 
 
 def main() -> None:
@@ -32,6 +33,13 @@ def main() -> None:
         translation_manager = TranslationManager.instance()
         translation_manager.initialize(app)
         log_info("startup", "Translation system initialized")
+        
+        # Initialize modern styling system
+        style_manager = initialize_style_manager(app)
+        if apply_modern_theme():
+            log_info("startup", "Modern theme applied successfully")
+        else:
+            log_error("startup", "Failed to apply modern theme")
         
         log_info("startup", "Creating main window")
         window = PixelDrawingApp()

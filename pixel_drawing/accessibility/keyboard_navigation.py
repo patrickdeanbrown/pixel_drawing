@@ -2,7 +2,7 @@
 
 from typing import Optional, Tuple, Callable
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QObject
-from PyQt6.QtGui import QKeyEvent, QAccessible
+from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QWidget
 
 from ..constants import AppConstants

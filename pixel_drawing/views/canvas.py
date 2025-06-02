@@ -3,7 +3,7 @@
 from typing import Tuple, Optional
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal, QTimer
-from PyQt6.QtGui import QPainter, QPen, QColor
+from PyQt6.QtGui import QPainter, QPen, QColor, QKeyEvent, QFocusEvent, QAccessible
 
 from ..models import PixelArtModel
 from ..controllers.tools import ToolManager
@@ -12,9 +12,12 @@ from ..exceptions import ValidationError
 from ..utils.cursors import CursorManager
 from ..utils.dirty_rectangles import DirtyRegionManager
 from ..enums import ToolType
+from ..accessibility import KeyboardNavigationMixin, CanvasKeyboardNavigation, AccessibilityUtils
+from ..accessibility.screen_reader import ScreenReaderSupport
+from ..i18n import tr_status
 
 
-class PixelCanvas(QWidget):
+class PixelCanvas(QWidget, KeyboardNavigationMixin):
     """Interactive canvas widget for pixel art drawing and editing.
     
     This widget provides the visual interface for pixel art creation, handling
@@ -56,6 +59,10 @@ class PixelCanvas(QWidget):
         self.current_color = QColor(AppConstants.DEFAULT_FG_COLOR)
         self._is_drawing = False
         
+        # Initialize accessibility components
+        self._screen_reader = ScreenReaderSupport(self)
+        self._canvas_navigation = None  # Will be initialized after model setup
+        
         # Set up model
         if model is None:
             model = PixelArtModel()
@@ -83,6 +90,10 @@ class PixelCanvas(QWidget):
         
         # Enable mouse tracking
         self.setMouseTracking(True)
+        
+        # Initialize accessibility features
+        self._setup_accessibility()
+        self._setup_keyboard_navigation()
         
         # Performance optimizations
         self._grid_pen = QPen(QColor(AppConstants.GRID_COLOR), 1)
@@ -131,6 +142,15 @@ class PixelCanvas(QWidget):
         """Handle canvas resize from model."""
         self._update_widget_size()
         self.update()
+        
+        # Update accessibility description
+        self.setAccessibleDescription(tr_status("canvas_description", 
+                                               width=new_width, 
+                                               height=new_height))
+        
+        # Update keyboard navigation bounds
+        if self._canvas_navigation:
+            self._canvas_navigation.set_canvas_dimensions(new_width, new_height)
     
     def _on_canvas_cleared(self) -> None:
         """Handle canvas clear from model."""
@@ -336,3 +356,112 @@ class PixelCanvas(QWidget):
         parent = self.parent()
         if hasattr(parent, 'handle_pan_request'):
             parent.handle_pan_request(delta_x, delta_y)
+    
+    def _setup_accessibility(self) -> None:
+        """Set up accessibility features for the canvas."""
+        # Set accessibility properties
+        self.setAccessibleName(tr_status("drawing_canvas"))
+        self.setAccessibleDescription(tr_status("canvas_description", 
+                                               width=self._model.width, 
+                                               height=self._model.height))
+        
+        # Enable focus for keyboard navigation
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        
+        # Set up screen reader announcements
+        self._screen_reader.announcement_requested.connect(self._on_accessibility_announcement)
+    
+    def _setup_keyboard_navigation(self) -> None:
+        """Set up keyboard navigation for the canvas."""
+        # Initialize canvas keyboard navigation
+        self._canvas_navigation = CanvasKeyboardNavigation(
+            self._model.width, 
+            self._model.height, 
+            self
+        )
+        
+        # Connect navigation signals
+        self._canvas_navigation.cursor_moved.connect(self._on_keyboard_cursor_moved)
+        self._canvas_navigation.pixel_activated.connect(self._on_keyboard_pixel_activated)
+        self._canvas_navigation.navigation_announced.connect(self._screen_reader.announce)
+        
+        # Enable keyboard navigation on the mixin
+        self.enable_keyboard_navigation(
+            cursor_moved_callback=self._on_cursor_moved_callback,
+            action_callback=self._on_action_callback
+        )
+    
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Handle keyboard events for accessibility and navigation."""
+        # Handle tool shortcuts first
+        if self._canvas_navigation and self._canvas_navigation.handle_tool_shortcut(event.text()):
+            tool_name = self._canvas_navigation._current_tool
+            self.set_current_tool(tool_name)
+            event.accept()
+            return
+        
+        # Handle navigation keys
+        if self.handle_keyboard_navigation(event):
+            event.accept()
+            return
+        
+        # Handle escape to exit keyboard navigation mode
+        if event.key() == Qt.Key.Key_Escape:
+            self.clearFocus()
+            self._screen_reader.announce("Exited drawing mode", "normal")
+            event.accept()
+            return
+        
+        # Pass to parent for other keys
+        super().keyPressEvent(event)
+    
+    def focusInEvent(self, event: QFocusEvent) -> None:
+        """Handle focus in events for accessibility."""
+        super().focusInEvent(event)
+        
+        # Announce canvas focus
+        x, y = self.get_keyboard_cursor_position()
+        color_name = AccessibilityUtils.get_color_name(self._model.get_pixel(x, y))
+        tool_name = self.get_current_tool_id() or "brush"
+        
+        self._screen_reader.announce_canvas_state(x, y, color_name, tool_name)
+        
+        # Announce keyboard instructions
+        instructions = tr_status("canvas_keyboard_instructions")
+        self._screen_reader.announce(instructions, "low")
+    
+    def focusOutEvent(self, event: QFocusEvent) -> None:
+        """Handle focus out events."""
+        super().focusOutEvent(event)
+    
+    def _on_cursor_moved_callback(self, x: int, y: int) -> None:
+        """Callback for keyboard cursor movement."""
+        if self._canvas_navigation:
+            self._canvas_navigation.set_keyboard_cursor_position(x, y)
+    
+    def _on_action_callback(self, x: int, y: int) -> None:
+        """Callback for keyboard action (drawing)."""
+        if 0 <= x < self._model.width and 0 <= y < self._model.height:
+            # Perform drawing action at keyboard cursor position
+            self._tool_manager.handle_press(x, y, self.current_color)
+            self._tool_manager.handle_release(x, y, self.current_color)
+    
+    def _on_keyboard_cursor_moved(self, x: int, y: int) -> None:
+        """Handle keyboard cursor movement."""
+        # Update visual cursor indicator if needed
+        self.update()
+        
+        # Emit hover signal for status updates
+        self.pixel_hovered.emit(x, y)
+    
+    def _on_keyboard_pixel_activated(self, x: int, y: int) -> None:
+        """Handle pixel activation via keyboard."""
+        if 0 <= x < self._model.width and 0 <= y < self._model.height:
+            # Perform drawing action
+            self._tool_manager.handle_press(x, y, self.current_color)
+            self._tool_manager.handle_release(x, y, self.current_color)
+    
+    def _on_accessibility_announcement(self, message: str) -> None:
+        """Handle accessibility announcements."""
+        # Could be used to display visual announcements for hearing-impaired users
+        pass

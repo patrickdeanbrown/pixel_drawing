@@ -277,7 +277,10 @@ class TranslationManager:
                 "edit_menu": "Edit", 
                 "settings_menu": "Settings",
                 "preferences": "Preferences...",
-                "quit": "Quit"
+                "quit": "Quit",
+                "drawing_canvas": "Drawing Canvas",
+                "canvas_description": "Pixel art drawing canvas, {width} by {height} pixels",
+                "canvas_keyboard_instructions": "Use arrow keys to navigate, Space to draw, tool shortcuts (B/F/E/I/H) to change tools"
             },
             "dialogs": {
                 "choose_color_title": "Choose Color",
@@ -305,7 +308,24 @@ class TranslationManager:
                 "pixel_info": "Pixel ({x}, {y}): {color}",
                 "file_opened": "Opened: {filename}",
                 "file_saved": "Saved: {filename}",
-                "file_exported": "Exported: {filename}"
+                "file_exported": "Exported: {filename}",
+                "cursor_position": "Cursor at pixel {x}, {y}",
+                "pixel_drawn": "Drew with {tool} at pixel {x}, {y}",
+                "tool_changed_keyboard": "Tool changed to {tool}",
+                "grid_position": "Row {row}, Column {column}",
+                "canvas_state": "Position {x}, {y}, color {color}, tool {tool}",
+                "tool_selected": "{tool} tool selected, shortcut {shortcut}",
+                "color_selected": "Color {color} selected, hex value {hex}",
+                "canvas_operation": "{operation} at position {x}, {y}",
+                "navigation_position": "Position {x}, {y}, {x_percent}% across, {y_percent}% down",
+                "validation_error": "Error: {error}",
+                "file_operation_success": "{operation} successful: {filename}",
+                "file_operation_failed": "{operation} failed: {filename}",
+                "button_activated": "{button} button activated",
+                "menu_navigation": "{menu} menu, {item}",
+                "dialog_opened": "{title} dialog opened",
+                "value_changed": "{control} changed to {value}",
+                "selection_changed": "{item} selected"
             },
             "errors": {
                 "coords_out_of_bounds": "Coordinates out of bounds",

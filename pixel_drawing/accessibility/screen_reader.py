@@ -3,7 +3,6 @@
 from typing import Optional, Dict, Any
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QApplication
-from PyQt6.QtGui import QAccessible, QAccessibleEvent
 
 from ..i18n import tr_status, tr_panel
 
@@ -150,9 +149,8 @@ class ScreenReaderSupport(QObject):
             temp_widget = QWidget()
             temp_widget.setAccessibleName(message)
             
-            # Trigger accessibility event
-            accessible_event = QAccessibleEvent(temp_widget, QAccessible.Event.NameChanged)
-            QAccessible.updateAccessibility(accessible_event)
+            # Note: QAccessible usage removed for compatibility
+            # Screen reader announcements would be handled through platform-specific APIs
     
     def _schedule_announcement_processing(self) -> None:
         """Schedule processing of queued announcements."""

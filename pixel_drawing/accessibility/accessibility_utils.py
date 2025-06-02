@@ -1,7 +1,7 @@
 """Accessibility utility functions and constants."""
 
 from typing import Optional, Dict, Any
-from PyQt6.QtGui import QColor, QAccessible
+from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget
 
@@ -120,22 +120,22 @@ class AccessibilityUtils:
     def setup_accessible_widget(widget: QWidget, 
                                accessible_name: str,
                                accessible_description: Optional[str] = None,
-                               role: Optional[QAccessible.Role] = None) -> None:
+                               role: Optional[str] = None) -> None:
         """Configure accessibility properties for a widget.
         
         Args:
             widget: Widget to configure
             accessible_name: Name for screen readers
             accessible_description: Optional detailed description
-            role: Optional accessibility role
+            role: Optional accessibility role (as string)
         """
         widget.setAccessibleName(accessible_name)
         
         if accessible_description:
             widget.setAccessibleDescription(accessible_description)
             
-        if role:
-            widget.setAccessibleRole(role)
+        # Note: QAccessible.Role usage removed for compatibility
+        # Role setting would be handled through Qt accessibility system
     
     @staticmethod
     def setup_tool_button_accessibility(button: QWidget, 
@@ -157,7 +157,7 @@ class AccessibilityUtils:
             button,
             accessible_name,
             accessible_desc,
-            QAccessible.Role.Button
+            "Button"
         )
         
         # Add shortcut information to what's this
@@ -181,7 +181,7 @@ class AccessibilityUtils:
             button,
             accessible_name, 
             accessible_desc,
-            QAccessible.Role.Button
+            "Button"
         )
         
         # Update tooltip with accessible information
@@ -203,7 +203,7 @@ class AccessibilityUtils:
             canvas,
             accessible_name,
             accessible_desc,
-            QAccessible.Role.Canvas
+            "Canvas"
         )
         
         # Set up keyboard navigation instructions

@@ -3,7 +3,7 @@
 from typing import Tuple, Optional
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal, QTimer
-from PyQt6.QtGui import QPainter, QPen, QColor, QKeyEvent, QFocusEvent, QAccessible
+from PyQt6.QtGui import QPainter, QPen, QColor, QKeyEvent, QFocusEvent
 
 from ..models import PixelArtModel
 from ..controllers.tools import ToolManager

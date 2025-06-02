@@ -71,16 +71,20 @@ class ModernDesignConstants:
     FONT_WEIGHT_BOLD = 700
     
     # ==========================================================================
-    # Spacing and Layout
+    # Spacing and Layout (Material Design 8dp grid)
     # ==========================================================================
     
-    # Spacing Scale
-    SPACING_XS = 4
-    SPACING_SM = 8
-    SPACING_MD = 12
-    SPACING_LG = 16
-    SPACING_XL = 24
-    SPACING_XXL = 32
+    # Material Design Spacing Scale (8dp baseline)
+    SPACING_XS = 4    # 0.5 * 8dp
+    SPACING_SM = 8    # 1 * 8dp
+    SPACING_MD = 16   # 2 * 8dp
+    SPACING_LG = 24   # 3 * 8dp
+    SPACING_XL = 32   # 4 * 8dp
+    SPACING_XXL = 48  # 6 * 8dp
+    
+    # Material Design standard increments
+    MATERIAL_UNIT = 8
+    MATERIAL_DENSE = 4
     
     # Padding
     PADDING_BUTTON = "8px 16px"
@@ -94,23 +98,29 @@ class ModernDesignConstants:
     MARGIN_ELEMENT = "4px"
     
     # ==========================================================================
-    # Component Dimensions
+    # Component Dimensions (Material Design)
     # ==========================================================================
     
-    # Buttons
-    BUTTON_HEIGHT_SMALL = 32
-    BUTTON_HEIGHT_REGULAR = 40
-    BUTTON_HEIGHT_LARGE = 48
+    # Material Design Button Heights
+    BUTTON_HEIGHT_SMALL = 32    # Dense button
+    BUTTON_HEIGHT_REGULAR = 40  # Standard button
+    BUTTON_HEIGHT_LARGE = 48    # Large button
     
-    BUTTON_MIN_WIDTH = 80
-    TOOL_BUTTON_SIZE = 48
-    COLOR_SWATCH_SIZE = 32
-    LARGE_COLOR_DISPLAY_SIZE = 80
+    # Material Design Button Dimensions
+    BUTTON_MIN_WIDTH = 64       # Material minimum
+    TOOL_BUTTON_SIZE = 48       # Material touch target
+    COLOR_SWATCH_SIZE = 32      # 4 * 8dp
+    LARGE_COLOR_DISPLAY_HEIGHT = 56  # Material component height
     
-    # Panels
-    SIDE_PANEL_WIDTH = 280
+    # Material Design Panel Dimensions
+    LEFT_SIDEBAR_WIDTH = 56     # Material navigation rail width
+    SIDE_PANEL_WIDTH = 280      # Right panel width
     SIDE_PANEL_MIN_WIDTH = 240
     SIDE_PANEL_MAX_WIDTH = 320
+    
+    # Material Design Navigation
+    NAV_RAIL_WIDTH = 56         # Standard navigation rail
+    NAV_RAIL_ICON_SIZE = 24     # Material icon size
     
     # Input Fields
     INPUT_HEIGHT = 36
@@ -132,12 +142,21 @@ class ModernDesignConstants:
     RADIUS_XLARGE = 12
     
     # ==========================================================================
-    # Shadows
+    # Material Design Elevation and Shadows
     # ==========================================================================
     
-    SHADOW_LIGHT = "0 1px 3px rgba(0, 0, 0, 0.12)"
-    SHADOW_MEDIUM = "0 2px 6px rgba(0, 0, 0, 0.15)"
-    SHADOW_HEAVY = "0 4px 12px rgba(0, 0, 0, 0.15)"
+    # Material Design Elevation System
+    ELEVATION_0 = "none"
+    ELEVATION_1 = "0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)"
+    ELEVATION_2 = "0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23)"
+    ELEVATION_3 = "0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23)"
+    ELEVATION_4 = "0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22)"
+    ELEVATION_5 = "0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22)"
+    
+    # Legacy shadows for backward compatibility
+    SHADOW_LIGHT = ELEVATION_1
+    SHADOW_MEDIUM = ELEVATION_2
+    SHADOW_HEAVY = ELEVATION_4
     SHADOW_FOCUS = "0 0 0 2px rgba(160, 32, 240, 0.2)"
     
     # ==========================================================================

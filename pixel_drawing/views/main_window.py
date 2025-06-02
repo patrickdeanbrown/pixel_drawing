@@ -101,8 +101,13 @@ class PixelDrawingApp(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Create main layout
+        # Create main layout with Material Design structure
         main_layout = QHBoxLayout(central_widget)
+        main_layout.setSpacing(0)  # No spacing for Material Design layout
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create Material Design navigation rail (left sidebar)
+        self.create_navigation_rail(main_layout)
         
         # Create canvas area with scroll capability
         self.scroll_area = QScrollArea()
@@ -132,6 +137,98 @@ class PixelDrawingApp(QMainWindow):
         
         # Preload icons for better performance
         preload_app_icons()
+    
+    def create_navigation_rail(self, main_layout) -> None:
+        """Create Material Design navigation rail (left sidebar)."""
+        nav_rail = QWidget()
+        nav_rail.setObjectName("navigationRail")
+        nav_rail.setFixedWidth(ModernDesignConstants.NAV_RAIL_WIDTH)
+        
+        nav_layout = QVBoxLayout(nav_rail)
+        nav_layout.setSpacing(ModernDesignConstants.SPACING_SM)
+        nav_layout.setContentsMargins(
+            ModernDesignConstants.SPACING_SM,
+            ModernDesignConstants.SPACING_MD,
+            ModernDesignConstants.SPACING_SM,
+            ModernDesignConstants.SPACING_MD
+        )
+        
+        # File operations following Material Design patterns
+        file_actions = [
+            ("new", "New File", "Ctrl+N", self.new_file),
+            ("open", "Open File", "Ctrl+O", self.open_file),
+            ("save", "Save", "Ctrl+S", self.save_file),
+            ("export", "Export PNG", "Ctrl+E", self.export_png),
+        ]
+        
+        for action_id, tooltip, shortcut, handler in file_actions:
+            btn = QPushButton()
+            btn.setObjectName(f"navRail_{action_id}")
+            
+            # Apply Material Design navigation rail button styling
+            self._apply_nav_rail_button_style(btn)
+            
+            # Set icon (you can replace with actual icons later)
+            if action_id == "new":
+                btn.setText("+")
+            elif action_id == "open":
+                btn.setText("📁")
+            elif action_id == "save":
+                btn.setText("💾")
+            elif action_id == "export":
+                btn.setText("↓")
+            
+            btn.setToolTip(f"{tooltip} ({shortcut})")
+            btn.clicked.connect(handler)
+            
+            nav_layout.addWidget(btn)
+        
+        # Add separator
+        nav_layout.addSpacing(ModernDesignConstants.SPACING_MD)
+        
+        # Edit operations
+        edit_actions = [
+            ("undo", "Undo", "Ctrl+Z", self.undo),
+            ("redo", "Redo", "Ctrl+Y", self.redo),
+        ]
+        
+        for action_id, tooltip, shortcut, handler in edit_actions:
+            btn = QPushButton()
+            btn.setObjectName(f"navRail_{action_id}")
+            self._apply_nav_rail_button_style(btn)
+            
+            if action_id == "undo":
+                btn.setText("↶")
+            elif action_id == "redo":
+                btn.setText("↷")
+                
+            btn.setToolTip(f"{tooltip} ({shortcut})")
+            btn.clicked.connect(handler)
+            nav_layout.addWidget(btn)
+        
+        nav_layout.addStretch()  # Push everything to top
+        main_layout.addWidget(nav_rail)
+    
+    def _apply_nav_rail_button_style(self, button: QPushButton) -> None:
+        """Apply Material Design navigation rail button styling."""
+        button.setFixedSize(40, 40)
+        button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 20px;
+                font-size: 16px;
+                font-weight: 500;
+                color: #5F6368;
+            }
+            QPushButton:hover {
+                background-color: rgba(160, 32, 240, 0.08);
+                color: #A020F0;
+            }
+            QPushButton:pressed {
+                background-color: rgba(160, 32, 240, 0.12);
+            }
+        """)
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
@@ -269,9 +366,9 @@ class PixelDrawingApp(QMainWindow):
         side_layout.setSpacing(ModernDesignConstants.SPACING_LG)
         side_layout.setContentsMargins(
             ModernDesignConstants.SPACING_MD,
-            ModernDesignConstants.SPACING_LG, 
+            ModernDesignConstants.SPACING_MD, 
             ModernDesignConstants.SPACING_MD,
-            ModernDesignConstants.SPACING_LG
+            ModernDesignConstants.SPACING_MD
         )
         
         # Tools section
@@ -386,29 +483,33 @@ class PixelDrawingApp(QMainWindow):
         color_layout = QVBoxLayout(color_group)
         color_layout.setSpacing(ModernDesignConstants.SPACING_MD)
         
-        # Large current color display - clickable
-        self.color_display = QPushButton()
-        self.color_display.setObjectName("largeColorDisplay")
-        self.color_display.setFixedSize(
-            ModernDesignConstants.LARGE_COLOR_DISPLAY_SIZE, 
-            ModernDesignConstants.LARGE_COLOR_DISPLAY_SIZE
-        )
+        # Material Design color bar - full width
+        self.color_display = QPushButton(self.current_color.name().upper())
+        self.color_display.setObjectName("materialColorBar")
+        self.color_display.setFixedHeight(ModernDesignConstants.LARGE_COLOR_DISPLAY_HEIGHT)
         self.color_display.setStyleSheet(
             f"""
-            QPushButton#largeColorDisplay {{
+            QPushButton#materialColorBar {{
                 background-color: {self.current_color.name().upper()};
-                border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
-                border-radius: {ModernDesignConstants.RADIUS_MEDIUM}px;
+                border: none;
+                border-radius: 4px;
+                min-height: 56px;
+                font-weight: 500;
+                color: #FFFFFF;
+                text-align: center;
             }}
-            QPushButton#largeColorDisplay:hover {{
-                border-color: {ModernDesignConstants.PRIMARY_PURPLE};
-                box-shadow: 0 2px 6px rgba(160, 32, 240, 0.2);
+            QPushButton#materialColorBar:hover {{
+                background-color: {ModernDesignConstants.PRIMARY_PURPLE_DARK};
+                box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
+            }}
+            QPushButton#materialColorBar:pressed {{
+                background-color: {ModernDesignConstants.PRIMARY_PURPLE_DARK};
             }}
             """
         )
         self.color_display.setToolTip(tr_panel("current_color_tooltip"))
         self.color_display.clicked.connect(self.choose_color)
-        color_layout.addWidget(self.color_display, alignment=Qt.AlignmentFlag.AlignCenter)
+        color_layout.addWidget(self.color_display)
         
         # Color chooser button
         choose_btn = QPushButton(tr_panel("choose_color"))
@@ -476,17 +577,25 @@ class PixelDrawingApp(QMainWindow):
         self.current_color = color
         self.canvas.current_color = color
         
-        # Update main color display with modern styling
+        # Update Material Design color bar
+        self.color_display.setText(color.name().upper())
         self.color_display.setStyleSheet(
             f"""
-            QPushButton#largeColorDisplay {{
+            QPushButton#materialColorBar {{
                 background-color: {color.name().upper()};
-                border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
-                border-radius: {ModernDesignConstants.RADIUS_MEDIUM}px;
+                border: none;
+                border-radius: 4px;
+                min-height: 56px;
+                font-weight: 500;
+                color: #FFFFFF;
+                text-align: center;
             }}
-            QPushButton#largeColorDisplay:hover {{
-                border-color: {ModernDesignConstants.PRIMARY_PURPLE};
-                box-shadow: 0 2px 6px rgba(160, 32, 240, 0.2);
+            QPushButton#materialColorBar:hover {{
+                box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
+            }}
+            QPushButton#materialColorBar:pressed {{
+                background-color: {color.name().upper()};
+                filter: brightness(0.9);
             }}
             """
         )

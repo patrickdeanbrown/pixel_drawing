@@ -466,10 +466,44 @@ QDialogButtonBox QPushButton {
    Special Components
    ========================================================================== */
 
-/* Side Panel */
-QWidget#sidePanel {
+/* Material Design Navigation Rail (Left Sidebar) */
+QWidget#navigationRail {
     background-color: #FFFFFF;
     border-right: 1px solid #E8EAED;
+    min-width: 56px;
+    max-width: 56px;
+}
+
+/* Navigation Rail Buttons */
+QPushButton.nav_rail_button {
+    background-color: transparent;
+    border: none;
+    border-radius: 16px;
+    padding: 8px;
+    margin: 4px;
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+}
+
+QPushButton.nav_rail_button:hover {
+    background-color: rgba(160, 32, 240, 0.08);
+}
+
+QPushButton.nav_rail_button:pressed {
+    background-color: rgba(160, 32, 240, 0.12);
+}
+
+QPushButton.nav_rail_button:checked {
+    background-color: rgba(160, 32, 240, 0.12);
+    color: #A020F0;
+}
+
+/* Side Panel (Right) */
+QWidget#sidePanel {
+    background-color: #FFFFFF;
+    border-left: 1px solid #E8EAED;
     min-width: 280px;
     max-width: 280px;
 }
@@ -479,6 +513,25 @@ QWidget#canvasArea {
     background-color: #F8F9FA;
     border: 1px solid #E8EAED;
     border-radius: 8px;
+}
+
+/* Material Design Color Bar */
+QPushButton#materialColorBar {
+    background-color: #A020F0;
+    border: none;
+    border-radius: 4px;
+    min-height: 56px;
+    font-weight: 500;
+    color: #FFFFFF;
+}
+
+QPushButton#materialColorBar:hover {
+    background-color: #8C1AC9;
+    box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
+}
+
+QPushButton#materialColorBar:pressed {
+    background-color: #7A1AB8;
 }
 
 /* Recent Colors Grid */

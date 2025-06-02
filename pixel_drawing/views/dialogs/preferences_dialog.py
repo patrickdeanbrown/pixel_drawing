@@ -11,6 +11,7 @@ from PyQt6.QtGui import QFont
 
 from ...i18n import TranslationManager, tr_dialog, tr_panel, tr_pref, SUPPORTED_LANGUAGES
 from ...constants import AppConstants
+from ...styles import ModernDesignConstants, apply_primary_button_style, apply_secondary_button_style
 
 
 class PreferencesDialog(QDialog):
@@ -72,9 +73,18 @@ class PreferencesDialog(QDialog):
             QDialogButtonBox.StandardButton.Apply
         )
         
+        # Apply modern styling to dialog buttons
+        ok_button = button_box.button(QDialogButtonBox.StandardButton.Ok)
+        cancel_button = button_box.button(QDialogButtonBox.StandardButton.Cancel)
+        apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
+        
+        apply_primary_button_style(ok_button)
+        apply_secondary_button_style(cancel_button)
+        apply_secondary_button_style(apply_button)
+        
         button_box.accepted.connect(self._apply_and_close)
         button_box.rejected.connect(self.reject)
-        button_box.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(self._apply_settings)
+        apply_button.clicked.connect(self._apply_settings)
         
         layout.addWidget(button_box)
         

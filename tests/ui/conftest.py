@@ -5,8 +5,10 @@ This module provides PyQt6-specific fixtures and utilities for testing
 GUI components with pytest-qt.
 """
 
-import pytest
 import os
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+import pytest
 import sys
 from pathlib import Path
 from typing import Optional, Generator
@@ -45,7 +47,8 @@ def qapp():
     """
     if not PYQT_AVAILABLE:
         return Mock()
-    
+
+
     app = QApplication.instance()
     if app is None:
         app = QApplication([])

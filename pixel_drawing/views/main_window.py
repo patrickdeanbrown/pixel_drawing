@@ -61,12 +61,13 @@ class PixelDrawingApp(QMainWindow):
         - Signal/slot pattern for decoupled communication
     """
     
-    def __init__(self):
+    def __init__(self, model: PixelArtModel | None = None, file_service: FileService | None = None):
         super().__init__()
-        
+
         # Initialize core components
-        self._model = PixelArtModel()
-        self._file_service = FileService()
+        self._model = model or PixelArtModel()
+        self._file_service = file_service or FileService()
+        self._status_bar = self.statusBar()
         
         # UI state
         self.current_color = QColor(AppConstants.DEFAULT_FG_COLOR)
@@ -79,11 +80,16 @@ class PixelDrawingApp(QMainWindow):
         self.setup_ui()
         self.setWindowTitle(tr_window("app_title"))
         self.setMinimumSize(AppConstants.MIN_WINDOW_WIDTH, AppConstants.MIN_WINDOW_HEIGHT)
-        
+
         # Set up keyboard shortcuts using utility function
         setup_keyboard_shortcuts(self)
-        
+
         # Modern styling will be applied by style manager
+
+    @property
+    def canvas(self) -> PixelCanvas:
+        """Return the canvas widget."""
+        return self._canvas
     
     def _setup_connections(self) -> None:
         """Set up signal/slot connections between components."""
@@ -115,15 +121,15 @@ class PixelDrawingApp(QMainWindow):
         self.scroll_area.setFrameStyle(QFrame.Shape.StyledPanel)
         self.scroll_area.setWidgetResizable(False)  # Fixed size for pixel perfect rendering
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        self.canvas = PixelCanvas(self, self._model, AppConstants.DEFAULT_PIXEL_SIZE)
+
+        self._canvas = PixelCanvas(self, self._model, AppConstants.DEFAULT_PIXEL_SIZE)
         # Connect canvas signals for decoupled communication
-        self.canvas.color_used.connect(self._on_color_used)
-        self.canvas.tool_changed.connect(self._on_tool_changed)
-        self.canvas.pixel_hovered.connect(self._on_pixel_hovered)
+        self._canvas.color_used.connect(self._on_color_used)
+        self._canvas.tool_changed.connect(self._on_tool_changed)
+        self._canvas.pixel_hovered.connect(self._on_pixel_hovered)
         # Color used signal will handle color picker integration automatically
         
-        self.scroll_area.setWidget(self.canvas)
+        self.scroll_area.setWidget(self._canvas)
         main_layout.addWidget(self.scroll_area, 1)
         
         # Create side panel
@@ -133,7 +139,7 @@ class PixelDrawingApp(QMainWindow):
         self.create_menu_bar()
         
         # Create status bar
-        self.statusBar().showMessage(AppConstants.STATUS_READY)
+        self._status_bar.showMessage(AppConstants.STATUS_READY)
         
         # Preload icons for better performance
         preload_app_icons()
@@ -412,9 +418,10 @@ class PixelDrawingApp(QMainWindow):
         actions_layout.addWidget(clear_btn)
         
         side_layout.addWidget(actions_group)
-        
+
         side_layout.addStretch()
         main_layout.addWidget(side_panel)
+        self._side_panel = side_panel
     
     def create_color_panel(self, parent_layout) -> None:
         """Create the modern color selection panel."""
@@ -500,7 +507,7 @@ class PixelDrawingApp(QMainWindow):
     
     def set_tool(self, tool_id: str) -> None:
         """Set the current drawing tool."""
-        success = self.canvas.set_current_tool(tool_id)
+        success = self._canvas.set_current_tool(tool_id)
         if success:
             # Update button states
             for btn_id, btn in self.tool_buttons.items():
@@ -514,7 +521,7 @@ class PixelDrawingApp(QMainWindow):
             self.update_recent_colors()
         
         self.current_color = color
-        self.canvas.current_color = color
+        self._canvas.current_color = color
         
         # Update Material Design color bar
         self.color_display.setText(color.name().upper())
@@ -569,16 +576,16 @@ class PixelDrawingApp(QMainWindow):
         
         # Create new model
         self._model = PixelArtModel()
-        self.canvas._model = self._model
-        self.canvas._tool_manager = ToolManager(self._model)
+        self._canvas._model = self._model
+        self._canvas._tool_manager = ToolManager(self._model)
         
         # Reconnect signals
         self._model.model_loaded.connect(self._on_model_loaded)
         self._model.model_saved.connect(self._on_model_saved)
         
         # Update canvas
-        self.canvas._update_widget_size()
-        self.canvas.update()
+        self._canvas._update_widget_size()
+        self._canvas.update()
         
         # Update UI
         self.width_spin.setValue(self._model.width)
@@ -652,7 +659,7 @@ class PixelDrawingApp(QMainWindow):
             
             # Perform resize through model
             self._model.resize(new_width, new_height)
-            self.statusBar().showMessage(tr_status("canvas_resized", width=new_width, height=new_height))
+            self._status_bar.showMessage(tr_status("canvas_resized", width=new_width, height=new_height))
             
         except ValidationError as e:
             from ..utils.logging import log_warning
@@ -670,24 +677,17 @@ class PixelDrawingApp(QMainWindow):
     
     # Signal handlers
     def _on_color_used(self, color: QColor) -> None:
-        """Handle color usage on canvas."""
-        if color != self.current_color and color not in self.recent_colors:
-            self.recent_colors.insert(0, color)
-            self.recent_colors = self.recent_colors[:AppConstants.RECENT_COLORS_COUNT]
-            self.update_recent_colors()
-    
-    def _on_color_used(self, color: QColor) -> None:
         """Handle color used on canvas (including from color picker)."""
         self.set_color(color, add_to_recent=True)
     
     def _on_tool_changed(self, tool_id: str) -> None:
         """Handle tool changes."""
-        self.statusBar().showMessage(tr_status("tool_changed", tool_id=tool_id))
+        self._status_bar.showMessage(tr_status("tool_changed", tool_id=tool_id))
     
     def _on_pixel_hovered(self, x: int, y: int) -> None:
         """Handle pixel hover events."""
         color = self._model.get_pixel(x, y)
-        self.statusBar().showMessage(tr_status("pixel_info", x=x, y=y, color=color.name().upper()))
+        self._status_bar.showMessage(tr_status("pixel_info", x=x, y=y, color=color.name().upper()))
     
     def _on_model_loaded(self) -> None:
         """Handle model loaded."""
@@ -696,8 +696,8 @@ class PixelDrawingApp(QMainWindow):
         self.height_spin.setValue(self._model.height)
         
         # Force canvas to update size and redraw
-        self.canvas._update_widget_size()
-        self.canvas.update()  # Full redraw of entire canvas
+        self._canvas._update_widget_size()
+        self._canvas.update()  # Full redraw of entire canvas
     
     def _on_model_saved(self, file_path: str) -> None:
         """Handle model saved."""
@@ -705,17 +705,17 @@ class PixelDrawingApp(QMainWindow):
     
     def _on_file_loaded(self, file_path: str) -> None:
         """Handle file loaded successfully."""
-        self.statusBar().showMessage(tr_status("file_opened", filename=os.path.basename(file_path)))
+        self._status_bar.showMessage(tr_status("file_opened", filename=os.path.basename(file_path)))
         self.setWindowTitle(tr_window("app_with_file", filename=os.path.basename(file_path)))
     
     def _on_file_saved(self, file_path: str) -> None:
         """Handle file saved successfully."""
-        self.statusBar().showMessage(tr_status("file_saved", filename=os.path.basename(file_path)))
+        self._status_bar.showMessage(tr_status("file_saved", filename=os.path.basename(file_path)))
         QMessageBox.information(self, tr_dialog("success_title"), tr_dialog("file_saved_message"))
     
     def _on_file_exported(self, file_path: str) -> None:
         """Handle file exported successfully."""
-        self.statusBar().showMessage(tr_status("file_exported", filename=os.path.basename(file_path)))
+        self._status_bar.showMessage(tr_status("file_exported", filename=os.path.basename(file_path)))
         QMessageBox.information(self, tr_dialog("success_title"), tr_dialog("png_exported_message"))
     
     def _on_file_operation_failed(self, operation: str, error_message: str) -> None:
@@ -762,8 +762,8 @@ class PixelDrawingApp(QMainWindow):
         v_scroll = self.scroll_area.verticalScrollBar()
         
         # Calculate new positions (invert delta for natural panning)
-        new_h = h_scroll.value() - delta_x * self.canvas.pixel_size
-        new_v = v_scroll.value() - delta_y * self.canvas.pixel_size
+        new_h = h_scroll.value() - delta_x * self._canvas.pixel_size
+        new_v = v_scroll.value() - delta_y * self._canvas.pixel_size
         
         # Apply new scroll positions
         h_scroll.setValue(new_h)
@@ -773,9 +773,9 @@ class PixelDrawingApp(QMainWindow):
     def undo(self) -> None:
         """Undo the last operation."""
         if self._model.undo():
-            self.statusBar().showMessage(AppConstants.STATUS_UNDONE, 2000)
+            self._status_bar.showMessage(AppConstants.STATUS_UNDONE, 2000)
     
     def redo(self) -> None:
         """Redo the last undone operation."""
         if self._model.redo():
-            self.statusBar().showMessage(AppConstants.STATUS_REDONE, 2000)
+            self._status_bar.showMessage(AppConstants.STATUS_REDONE, 2000)

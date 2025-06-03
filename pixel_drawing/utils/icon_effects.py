@@ -88,21 +88,23 @@ def create_icon_with_states(svg_path: str, size: int = 24) -> Optional[QIcon]:
         renderer.render(painter)
         painter.end()
         
-        # Add normal state
+        # Add normal state - use dark icon when unchecked
         icon.addPixmap(normal_pixmap, QIcon.Mode.Normal, QIcon.State.Off)
-        icon.addPixmap(normal_pixmap, QIcon.Mode.Normal, QIcon.State.On)
-        
-        # Create selected state (white icon)
+
+        # When the button is checked Qt requests the Normal/On pixmap.
+        # Provide the white variant here so the icon color updates
+        # immediately when a tool button is toggled on startup.
         selected_pixmap = QPixmap(size, size)
+        icon.addPixmap(selected_pixmap, QIcon.Mode.Normal, QIcon.State.On)
+
+        # Now render the white icon used for both Normal/On and Selected states
         selected_pixmap.fill(Qt.GlobalColor.transparent)
-        
         painter = QPainter(selected_pixmap)
-        # First draw the original icon
         renderer.render(painter)
-        # Then overlay white color using composition mode
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
         painter.fillRect(selected_pixmap.rect(), QColor(255, 255, 255))
         painter.end()
+        # Create selected state (white icon) for explicit Selected/Active modes
         
         # Add selected states  
         icon.addPixmap(selected_pixmap, QIcon.Mode.Selected, QIcon.State.Off)

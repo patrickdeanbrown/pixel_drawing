@@ -348,8 +348,12 @@ class PixelDrawingApp(QMainWindow):
             row = i // 2
             col = i % 2
             tools_layout.addWidget(btn, row, col)
-        
+
         side_layout.addWidget(tools_group)
+
+        # Ensure the default brush tool is active and the canvas is ready
+        # for drawing immediately on application startup.
+        self.set_tool(ToolType.BRUSH.value)
         
         # Color group
         self.create_color_panel(side_layout)

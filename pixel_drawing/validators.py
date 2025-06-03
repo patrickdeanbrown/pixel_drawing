@@ -51,7 +51,10 @@ def validate_file_path(file_path: str, operation: str = "access") -> None:
         directory = os.path.dirname(file_path)
         if directory and not os.path.exists(directory):
             raise FileOperationError(tr_error("directory_not_exists", path=directory))
-        if os.path.exists(file_path) and not os.access(file_path, os.W_OK):
-            raise FileOperationError(tr_error("file_not_writable", path=file_path))
+        if os.path.exists(file_path):
+            writable = os.access(file_path, os.W_OK)
+            perms = os.stat(file_path).st_mode
+            if not writable or perms & 0o222 == 0:
+                raise FileOperationError(tr_error("file_not_writable", path=file_path))
         if directory and not os.access(directory, os.W_OK):
             raise FileOperationError(tr_error("directory_not_writable", path=directory))

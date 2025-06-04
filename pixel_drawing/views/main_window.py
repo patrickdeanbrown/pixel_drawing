@@ -166,18 +166,24 @@ class PixelDrawingApp(QMainWindow):
             btn.setObjectName(f"navRail_{action_id}")
             
             # Apply Material Design navigation rail button styling
-            self._apply_nav_rail_button_style(btn)
+            self._apply_nav_rail_button_style(btn) # Ensures class property is set for QSS
             
-            # Set icon (you can replace with actual icons later)
+            icon_path = ""
             if action_id == "new":
-                btn.setText("+")
+                icon_path = AppConstants.ICON_MD_ADD
             elif action_id == "open":
-                btn.setText("📁")
+                icon_path = AppConstants.ICON_MD_FOLDER_OPEN
             elif action_id == "save":
-                btn.setText("💾")
+                icon_path = AppConstants.ICON_MD_SAVE
             elif action_id == "export":
-                btn.setText("↓")
+                icon_path = AppConstants.ICON_MD_PUBLISH
             
+            if icon_path:
+                icon = get_cached_icon(icon_path)
+                if icon:
+                    btn.setIcon(icon)
+
+            btn.setIconSize(QSize(ModernDesignConstants.NAV_RAIL_ICON_SIZE, ModernDesignConstants.NAV_RAIL_ICON_SIZE))
             btn.setToolTip(f"{tooltip} ({shortcut})")
             btn.clicked.connect(handler)
             
@@ -195,13 +201,20 @@ class PixelDrawingApp(QMainWindow):
         for action_id, tooltip, shortcut, handler in edit_actions:
             btn = QPushButton()
             btn.setObjectName(f"navRail_{action_id}")
-            self._apply_nav_rail_button_style(btn)
+            self._apply_nav_rail_button_style(btn) # Ensures class property is set for QSS
             
+            icon_path = ""
             if action_id == "undo":
-                btn.setText("↶")
+                icon_path = AppConstants.ICON_MD_UNDO
             elif action_id == "redo":
-                btn.setText("↷")
-                
+                icon_path = AppConstants.ICON_MD_REDO
+
+            if icon_path:
+                icon = get_cached_icon(icon_path)
+                if icon:
+                    btn.setIcon(icon)
+
+            btn.setIconSize(QSize(ModernDesignConstants.NAV_RAIL_ICON_SIZE, ModernDesignConstants.NAV_RAIL_ICON_SIZE))
             btn.setToolTip(f"{tooltip} ({shortcut})")
             btn.clicked.connect(handler)
             nav_layout.addWidget(btn)
@@ -212,23 +225,10 @@ class PixelDrawingApp(QMainWindow):
     def _apply_nav_rail_button_style(self, button: QPushButton) -> None:
         """Apply Material Design navigation rail button styling."""
         button.setFixedSize(40, 40)
-        button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                border-radius: 20px;
-                font-size: 16px;
-                font-weight: 500;
-                color: #5F6368;
-            }
-            QPushButton:hover {
-                background-color: rgba(160, 32, 240, 0.08);
-                color: #A020F0;
-            }
-            QPushButton:pressed {
-                background-color: rgba(160, 32, 240, 0.12);
-            }
-        """)
+        # Styles are now primarily handled by QSS for QPushButton.nav_rail_button
+        # Ensure the button has the correct object name or class if needed for QSS.
+        # button.setObjectName(f"navRail_{button.property('action_id')}") # Example if specific ID needed
+        button.setProperty("class", "nav_rail_button") # Or use a class property if QSS targets .nav_rail_button
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
@@ -299,7 +299,7 @@ class PixelDrawingApp(QMainWindow):
         side_panel.setObjectName("sidePanel")
         side_panel.setFixedWidth(ModernDesignConstants.SIDE_PANEL_WIDTH)
         side_layout = QVBoxLayout(side_panel)
-        side_layout.setSpacing(ModernDesignConstants.SPACING_LG)
+        side_layout.setSpacing(ModernDesignConstants.SPACING_MD) # Reduced from LG to MD
         side_layout.setContentsMargins(
             ModernDesignConstants.SPACING_MD,
             ModernDesignConstants.SPACING_MD, 
@@ -361,12 +361,13 @@ class PixelDrawingApp(QMainWindow):
         # Canvas size group
         size_group = QGroupBox(tr_panel("canvas_size_group"))
         size_layout = QVBoxLayout(size_group)
-        size_layout.setSpacing(ModernDesignConstants.SPACING_MD)
+        size_layout.setSpacing(ModernDesignConstants.SPACING_SM) # Reduced from MD to SM
         
         # Width control
         width_layout = QHBoxLayout()
         width_label = QLabel(tr_panel("width_label"))
-        width_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_PRIMARY}; font-weight: {ModernDesignConstants.FONT_WEIGHT_MEDIUM};")
+        width_label.setProperty("class", "emphasizedLabel") # For QSS styling
+        # width_label.setStyleSheet(...) # Removed, style handled by QSS
         width_layout.addWidget(width_label)
         
         self.width_spin = QSpinBox()
@@ -380,7 +381,8 @@ class PixelDrawingApp(QMainWindow):
         # Height control
         height_layout = QHBoxLayout()
         height_label = QLabel(tr_panel("height_label"))
-        height_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_PRIMARY}; font-weight: {ModernDesignConstants.FONT_WEIGHT_MEDIUM};")
+        height_label.setProperty("class", "emphasizedLabel") # For QSS styling
+        # height_label.setStyleSheet(...) # Removed, style handled by QSS
         height_layout.addWidget(height_label)
         
         self.height_spin = QSpinBox()
@@ -420,32 +422,14 @@ class PixelDrawingApp(QMainWindow):
         """Create the modern color selection panel."""
         color_group = QGroupBox(tr_panel("color_group"))
         color_layout = QVBoxLayout(color_group)
-        color_layout.setSpacing(ModernDesignConstants.SPACING_MD)
+        color_layout.setSpacing(ModernDesignConstants.SPACING_SM) # Reduced from MD to SM
         
         # Material Design color bar - full width
         self.color_display = QPushButton(self.current_color.name().upper())
         self.color_display.setObjectName("materialColorBar")
         self.color_display.setFixedHeight(ModernDesignConstants.LARGE_COLOR_DISPLAY_HEIGHT)
-        self.color_display.setStyleSheet(
-            f"""
-            QPushButton#materialColorBar {{
-                background-color: {self.current_color.name().upper()};
-                border: none;
-                border-radius: 4px;
-                min-height: 56px;
-                font-weight: 500;
-                color: #FFFFFF;
-                text-align: center;
-            }}
-            QPushButton#materialColorBar:hover {{
-                background-color: {ModernDesignConstants.PRIMARY_PURPLE_DARK};
-                box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
-            }}
-            QPushButton#materialColorBar:pressed {{
-                background-color: {ModernDesignConstants.PRIMARY_PURPLE_DARK};
-            }}
-            """
-        )
+        # self.color_display.setStyleSheet(...) # Removed, styles are in QSS
+        self.update_color_display_style(self.current_color) # Call helper to set dynamic bg color
         self.color_display.setToolTip(tr_panel("current_color_tooltip"))
         self.color_display.clicked.connect(self.choose_color)
         color_layout.addWidget(self.color_display)
@@ -458,8 +442,8 @@ class PixelDrawingApp(QMainWindow):
         
         # Recent colors section
         recent_label = QLabel(tr_panel("recent_colors"))
-        recent_label.setObjectName("sectionSubtitle")
-        recent_label.setStyleSheet(f"color: {ModernDesignConstants.TEXT_SECONDARY}; font-size: {ModernDesignConstants.FONT_SIZE_SMALL}px;")
+        recent_label.setObjectName("sectionSubtitle") # This uses QLabel.subtitle style via its name.
+        # recent_label.setStyleSheet(...) # Removed, style handled by QSS for QLabel.subtitle or #sectionSubtitle
         color_layout.addWidget(recent_label)
         
         # Recent colors in modern grid
@@ -470,19 +454,10 @@ class PixelDrawingApp(QMainWindow):
         # Arrange in 3x2 grid with modern styling
         for i in range(ModernDesignConstants.RECENT_COLORS_COUNT):
             btn = ColorButton(self.recent_colors[i])
+            btn.setObjectName(f"recentColorButton_{i}") # Add object name for potential QSS
+            btn.setProperty("class", "color_swatch") # Ensure it picks up .color_swatch QSS
             btn.setFixedSize(ModernDesignConstants.COLOR_SWATCH_SIZE, ModernDesignConstants.COLOR_SWATCH_SIZE)
-            btn.setStyleSheet(
-                f"""
-                QPushButton {{
-                    border: 2px solid {ModernDesignConstants.BORDER_LIGHT};
-                    border-radius: {ModernDesignConstants.RADIUS_SMALL}px;
-                }}
-                QPushButton:hover {{
-                    border-color: {ModernDesignConstants.PRIMARY_PURPLE};
-                    box-shadow: 0 2px 4px rgba(160, 32, 240, 0.2);
-                }}
-                """
-            )
+            # btn.setStyleSheet(...) # Removed, styles are in QSS for .color_swatch
             btn.clicked.connect(partial(self._on_recent_color_clicked, i))
             self.recent_buttons.append(btn)
             
@@ -517,27 +492,7 @@ class PixelDrawingApp(QMainWindow):
         self.canvas.current_color = color
         
         # Update Material Design color bar
-        self.color_display.setText(color.name().upper())
-        self.color_display.setStyleSheet(
-            f"""
-            QPushButton#materialColorBar {{
-                background-color: {color.name().upper()};
-                border: none;
-                border-radius: 4px;
-                min-height: 56px;
-                font-weight: 500;
-                color: #FFFFFF;
-                text-align: center;
-            }}
-            QPushButton#materialColorBar:hover {{
-                box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
-            }}
-            QPushButton#materialColorBar:pressed {{
-                background-color: {color.name().upper()};
-                filter: brightness(0.9);
-            }}
-            """
-        )
+        self.update_color_display_style(color)
         
         # Toolbar removed for clean design
     
@@ -545,13 +500,40 @@ class PixelDrawingApp(QMainWindow):
         """Handle recent color button clicks."""
         if 0 <= index < len(self.recent_colors):
             self.set_color(self.recent_colors[index], add_to_recent=True)
-    
+
+    def update_color_display_style(self, color: QColor) -> None:
+        """Helper to update the style of the main color display button."""
+        # This is needed because the background color is dynamic.
+        # The rest of the style comes from QSS using objectName materialColorBar
+        self.color_display.setText(color.name().upper())
+        current_qss_style = """
+            QPushButton#materialColorBar {{
+                background-color: {dynamic_color};
+                /* other properties are set in modern_theme.qss */
+            }}
+            QPushButton#materialColorBar:pressed {{
+                background-color: {dynamic_color_pressed};
+                /* filter: brightness(90%); */ /* QSS filter not widely supported for QColor */
+            }}
+        """.format(
+            dynamic_color=color.name(),
+            dynamic_color_pressed=color.darker(110).name() # Darken by 10%
+        )
+        # To combine with existing QSS, one might typically get existing stylesheet string
+        # and append, but QSS doesn't merge this way. We rely on specificity.
+        # For #materialColorBar, this specific style for background-color will override the one in QSS
+        # if modern_theme.qss doesn't use !important.
+        # A cleaner way would be to use dynamic properties if full QSS override is desired.
+        self.color_display.setStyleSheet(current_qss_style)
+
     def update_recent_colors(self) -> None:
         """Update recent color buttons."""
         for i, btn in enumerate(self.recent_buttons):
-            btn.set_color(self.recent_colors[i])
-            btn.clicked.disconnect()
-            btn.clicked.connect(partial(self._on_recent_color_clicked, i))
+            btn.set_color(self.recent_colors[i]) # This method in ColorButton sets its background
+            # btn.clicked.disconnect() # Careful with blanket disconnects if other slots exist
+            # btn.clicked.connect(partial(self._on_recent_color_clicked, i)) # Reconnect if needed
+            # Assuming ColorButton handles its own click connection or it's done once.
+            # If ColorButton's set_color also updates its stylesheet, ensure it's QSS compatible.
     
     def choose_color(self) -> None:
         """Open color chooser dialog."""

@@ -8,35 +8,47 @@ Implements the design specifications for a modern, clean interface
    ========================================================================== */
 
 * {
+    /* Typography */
+    --font-family-main: "Roboto", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-size-body-small: 12px;
+    --font-size-body-medium: 14px;
+    --font-size-body-large: 16px;
+    --font-size-title-medium: 16px;
+    --font-size-title-large: 22px;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+
     /* Primary Colors */
-    --primary-purple: #A020F0;
-    --primary-purple-dark: #8C1AC9;
-    --primary-purple-light: #B348F7;
-    --primary-purple-alpha: rgba(160, 32, 240, 0.1);
+    --primary-purple: #673AB7; /* MD Purple 500 */
+    --primary-purple-rgb: 103, 58, 183; /* For use in rgba() */
+    --primary-purple-dark: #512DA8; /* MD Purple 700 */
+    --primary-purple-light: #9575CD; /* MD Purple 300 */
+    --primary-purple-alpha: rgba(103, 58, 183, 0.1); /* Derived from new primary */
     
     /* Secondary Colors */
-    --secondary-maroon: #8B1538;
-    --secondary-maroon-light: #A8276D;
+    --secondary-maroon: #009688; /* MD Teal 500 */
+    --secondary-maroon-light: #4DB6AC; /* MD Teal 300 */
     
     /* Background Colors */
-    --bg-main: #F8F9FA;
-    --bg-panel: #FFFFFF;
-    --bg-secondary: #F1F3F4;
-    --bg-hover: #E8F0FE;
-    --bg-pressed: #D2E3FC;
-    --bg-disabled: #F5F5F5;
+    --bg-main: #F5F5F5; /* MD Grey 100 */
+    --bg-panel: #FFFFFF; /* White */
+    --bg-secondary: #EEEEEE; /* MD Grey 200 */
+    --bg-hover: #E8EAF6; /* MD Indigo 50 */
+    --bg-pressed: #C5CAE9; /* MD Indigo 100 */
+    --bg-disabled: #F5F5F5; /* MD Grey 100 */
     
     /* Text Colors */
-    --text-primary: #202124;
-    --text-secondary: #5F6368;
-    --text-disabled: #9AA0A6;
-    --text-inverse: #FFFFFF;
+    --text-primary: #212121; /* MD Grey 900 */
+    --text-secondary: #757575; /* MD Grey 600 */
+    --text-disabled: #BDBDBD; /* MD Grey 400 */
+    --text-inverse: #FFFFFF; /* White */
     
     /* Border Colors */
-    --border-light: #E8EAED;
-    --border-medium: #DADCE0;
-    --border-dark: #BABABA;
-    --border-focus: #A020F0;
+    --border-light: #E0E0E0; /* MD Grey 300 */
+    --border-medium: #BDBDBD; /* MD Grey 400 */
+    --border-dark: #757575; /* MD Grey 600 */
+    --border-focus: #673AB7; /* New primary purple */
     
     /* Status Colors */
     --success: #34A853;
@@ -55,16 +67,17 @@ Implements the design specifications for a modern, clean interface
    ========================================================================== */
 
 QMainWindow {
-    background-color: #F8F9FA;
-    color: #202124;
-    font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
-    font-size: 14px;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-family-main);
+    font-size: var(--font-size-body-medium);
 }
 
 QWidget {
     background-color: transparent;
-    color: #202124;
-    font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-primary);
+    font-family: var(--font-family-main);
+    font-size: var(--font-size-body-medium); /* Base font size for most widgets */
 }
 
 /* ==========================================================================
@@ -72,23 +85,30 @@ QWidget {
    ========================================================================== */
 
 QLabel {
-    color: #202124;
-    font-weight: 400;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-regular);
+    font-size: var(--font-size-body-medium); /* Default QLabel size */
 }
 
 QLabel.section_header {
-    font-size: 16px;
-    font-weight: 600;
-    color: #202124;
+    font-size: var(--font-size-title-medium);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
     margin-bottom: 8px;
     padding-bottom: 4px;
-    border-bottom: 2px solid #A020F0;
+    border-bottom: 2px solid var(--primary-purple);
 }
 
-QLabel.subtitle {
-    font-size: 12px;
-    color: #5F6368;
-    font-weight: 400;
+QLabel.subtitle { /* General subtitle class */
+    font-size: var(--font-size-body-small);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-regular);
+}
+
+QLabel.emphasizedLabel, QLabel[class="emphasizedLabel"] {
+    font-weight: var(--font-weight-medium);
+    /* font-size is inherited from base QLabel (body-medium) */
+    /* color is inherited from base QLabel (text-primary) */
 }
 
 /* ==========================================================================
@@ -96,14 +116,14 @@ QLabel.subtitle {
    ========================================================================== */
 
 QGroupBox {
-    background-color: #FFFFFF;
-    border: 1px solid #E8EAED;
+    background-color: var(--bg-panel);
+    border: none;
     border-radius: 8px;
     margin-top: 16px;
-    padding: 16px 12px 12px 12px;
-    font-weight: 600;
-    font-size: 14px;
-    color: #202124;
+    padding: 16px;
+    font-weight: var(--font-weight-medium); /* Changed from 600 */
+    font-size: var(--font-size-body-medium); /* Explicitly set */
+    color: var(--text-primary);
 }
 
 QGroupBox::title {
@@ -111,10 +131,11 @@ QGroupBox::title {
     subcontrol-position: top left;
     left: 12px;
     top: -8px;
-    background-color: #FFFFFF;
+    background-color: var(--bg-panel);
     padding: 0 8px;
-    color: #A020F0;
-    font-weight: 600;
+    color: var(--primary-purple);
+    font-weight: var(--font-weight-medium); /* Changed from 600 */
+    font-size: var(--font-size-body-medium); /* Explicitly set */
 }
 
 /* ==========================================================================
@@ -122,138 +143,185 @@ QGroupBox::title {
    ========================================================================== */
 
 QPushButton {
-    background-color: #FFFFFF;
-    border: 1px solid #DADCE0;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-weight: 500;
-    color: #202124;
-    min-height: 20px;
+    background-color: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: var(--font-weight-medium); /* Changed from 600 */
+    font-size: var(--font-size-body-medium); /* Explicitly set */
+    color: var(--text-primary);
+    min-height: 24px;
     outline: none;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 QPushButton:hover {
-    background-color: #E8F0FE;
-    border-color: #A020F0;
-    color: #A020F0;
+    background-color: var(--bg-hover); /* Subtle hover for text-like buttons */
+    color: var(--primary-purple);
 }
 
 QPushButton:pressed {
-    background-color: #D2E3FC;
-    border-color: #8C1AC9;
+    background-color: var(--bg-pressed); /* Subtle pressed for text-like buttons */
 }
 
 QPushButton:disabled {
-    background-color: #F5F5F5;
-    color: #9AA0A6;
-    border-color: #E8EAED;
+    background-color: transparent;
+    color: var(--text-disabled);
+    border-color: transparent; /* Ensure no border on disabled */
 }
 
-/* Primary Action Button */
+/* Primary Action Button (MD3 Filled Button) */
 QPushButton#primaryButton, QPushButton.primary {
-    background-color: #A020F0;
-    color: #FFFFFF;
-    border: 1px solid #A020F0;
-    font-weight: 600;
+    background-color: var(--primary-purple);
+    color: var(--text-inverse);
+    border: none; /* Filled buttons don't have a border */
+    /* font-weight: 600; */ /* Inherits 500 from QPushButton now */
+    box-shadow: var(--shadow-light); /* Subtle shadow for default state */
 }
 
 QPushButton#primaryButton:hover, QPushButton.primary:hover {
-    background-color: #8C1AC9;
-    border-color: #8C1AC9;
-    box-shadow: 0 2px 6px rgba(160, 32, 240, 0.3);
+    background-color: var(--primary-purple-dark);
+    box-shadow: var(--shadow-medium); /* More pronounced shadow on hover */
+    color: var(--text-inverse); /* Ensure text color remains inverse */
 }
 
 QPushButton#primaryButton:pressed, QPushButton.primary:pressed {
-    background-color: #7A1AB8;
-    border-color: #7A1AB8;
+    background-color: var(--primary-purple-dark); /* Keep it dark */
+    box-shadow: var(--shadow-light); /* Revert to lighter shadow or remove */
 }
 
-/* Secondary Action Button */
+QPushButton#primaryButton:disabled, QPushButton.primary:disabled {
+    background-color: var(--bg-disabled);
+    color: var(--text-disabled);
+    box-shadow: none;
+}
+
+
+/* Secondary Action Button (MD3 Outlined Button) */
 QPushButton#secondaryButton, QPushButton.secondary {
     background-color: transparent;
-    color: #A020F0;
-    border: 1px solid #A020F0;
+    color: var(--primary-purple);
+    border: 1px solid var(--primary-purple);
+    padding: 9px 23px; /* Adjust padding to account for border */
 }
 
 QPushButton#secondaryButton:hover, QPushButton.secondary:hover {
-    background-color: rgba(160, 32, 240, 0.08);
-    border-color: #8C1AC9;
+    background-color: var(--primary-purple-alpha);
+    color: var(--primary-purple); /* Ensure text color remains primary */
+    border-color: var(--primary-purple-dark); /* Darken border on hover */
 }
 
-/* Danger/Destructive Button */
+QPushButton#secondaryButton:pressed, QPushButton.secondary:pressed {
+    background-color: rgba(var(--primary-purple-rgb, 103, 58, 183), 0.15); /* Slightly darker alpha */
+}
+
+QPushButton#secondaryButton:disabled, QPushButton.secondary:disabled {
+    background-color: transparent;
+    color: var(--text-disabled);
+    border-color: var(--border-light);
+}
+
+/* Danger/Destructive Button (MD3 Outlined Button - Danger variant) */
 QPushButton#dangerButton, QPushButton.danger {
     background-color: transparent;
-    color: #EA4335;
-    border: 1px solid #EA4335;
+    color: var(--error);
+    border: 1px solid var(--error);
+    padding: 9px 23px; /* Adjust padding to account for border */
 }
 
 QPushButton#dangerButton:hover, QPushButton.danger:hover {
-    background-color: rgba(234, 67, 53, 0.08);
-    border-color: #D33B2C;
+    background-color: rgba(234, 67, 53, 0.1); /* Alpha version of --error */
+    color: var(--error); /* Ensure text color remains error */
+    border-color: #D33B2C; /* Darker error color for border */
+}
+
+QPushButton#dangerButton:pressed, QPushButton.danger:pressed {
+    background-color: rgba(234, 67, 53, 0.15); /* Slightly darker alpha */
+}
+
+QPushButton#dangerButton:disabled, QPushButton.danger:disabled {
+    background-color: transparent;
+    color: var(--text-disabled);
+    border-color: var(--border-light);
 }
 
 /* Tool Buttons */
 QPushButton.tool_button {
-    background-color: #FFFFFF;
-    border: 1px solid #E8EAED;
-    border-radius: 8px;
-    padding: 12px;
-    min-width: 48px;
+    background-color: transparent; /* MD3 Icon button style */
+    border: none;
+    border-radius: 8px; /* Consistent with other buttons */
+    padding: 10px; /* Adjusted padding */
+    min-width: 48px; /* Keep size for touch target */
     min-height: 48px;
     max-width: 48px;
     max-height: 48px;
+    color: var(--text-primary); /* Icon color */
 }
 
 QPushButton.tool_button:hover {
-    background-color: #E8F0FE;
-    border-color: #A020F0;
-    box-shadow: 0 2px 6px rgba(160, 32, 240, 0.15);
+    background-color: var(--bg-hover);
+    color: var(--primary-purple);
+    box-shadow: none; /* Remove previous shadow if any */
+}
+
+QPushButton.tool_button:pressed {
+    background-color: var(--bg-pressed);
 }
 
 QPushButton.tool_button:checked {
-    background-color: #A020F0;
-    border-color: #8C1AC9;
-    color: #FFFFFF;
+    background-color: var(--primary-purple);
+    color: var(--text-inverse);
+    border: none;
 }
 
 QPushButton.tool_button:checked:hover {
-    background-color: #8C1AC9;
-    border-color: #7A1AB8;
+    background-color: var(--primary-purple-dark);
 }
+
+QPushButton.tool_button:disabled {
+    background-color: transparent;
+    color: var(--text-disabled);
+}
+
 
 /* Color Swatch Buttons */
 QPushButton.color_swatch {
-    border: 2px solid #E8EAED;
-    border-radius: 4px;
+    border: 2px solid var(--border-medium); /* More visible border */
+    border-radius: 8px; /* More rounded */
     min-width: 32px;
     min-height: 32px;
     max-width: 32px;
     max-height: 32px;
-    padding: 0;
+    padding: 0; /* No padding for swatch */
+    background-color: transparent; /* Ensure no base bg color interferes */
 }
 
 QPushButton.color_swatch:hover {
-    border-color: #A020F0;
-    box-shadow: 0 2px 4px rgba(160, 32, 240, 0.2);
+    border-color: var(--primary-purple);
+    box-shadow: var(--shadow-light);
 }
 
 QPushButton.color_swatch:pressed {
-    border-width: 3px;
-    border-color: #8C1AC9;
+    border-width: 3px; /* Keep emphasis on press */
+    border-color: var(--primary-purple-dark);
+    box-shadow: none;
 }
 
 /* Large Color Display */
 QPushButton.large_color_display {
-    border: 2px solid #E8EAED;
-    border-radius: 6px;
+    border: 2px solid var(--border-medium); /* More visible border */
+    border-radius: 12px; /* More rounded for larger element */
     min-width: 80px;
     min-height: 80px;
     padding: 0;
+    background-color: transparent;
 }
 
 QPushButton.large_color_display:hover {
-    border-color: #A020F0;
-    box-shadow: 0 2px 6px rgba(160, 32, 240, 0.2);
+    border-color: var(--primary-purple);
+    box-shadow: var(--shadow-medium);
 }
 
 /* ==========================================================================
@@ -261,35 +329,35 @@ QPushButton.large_color_display:hover {
    ========================================================================== */
 
 QSpinBox, QLineEdit {
-    background-color: #FFFFFF;
-    border: 1px solid #DADCE0;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border: 1px solid var(--border-medium); /* Use theme variable */
     border-radius: 4px;
     padding: 8px 12px;
-    color: #202124;
-    selection-background-color: #A020F0;
-    selection-color: #FFFFFF;
+    color: var(--text-primary); /* Use theme variable */
+    selection-background-color: var(--primary-purple);
+    selection-color: var(--text-inverse);
 }
 
 QSpinBox:focus, QLineEdit:focus {
-    border-color: #A020F0;
+    border-color: var(--primary-purple);
     outline: none;
-    box-shadow: 0 0 0 2px rgba(160, 32, 240, 0.2);
+    box-shadow: 0 0 0 2px rgba(var(--primary-purple-rgb), 0.2);
 }
 
 QSpinBox:hover, QLineEdit:hover {
-    border-color: #5F6368;
+    border-color: var(--text-secondary); /* Use theme variable for hover border */
 }
 
 QSpinBox::up-button, QSpinBox::down-button {
-    background-color: #F8F9FA;
-    border: 1px solid #DADCE0;
+    background-color: var(--bg-secondary); /* Use theme variable */
+    border: 1px solid var(--border-medium); /* Use theme variable */
     border-radius: 2px;
     width: 16px;
 }
 
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-    background-color: #E8F0FE;
-    border-color: #A020F0;
+    background-color: var(--bg-hover); /* Consistent hover */
+    border-color: var(--primary-purple);
 }
 
 QSpinBox::up-arrow, QSpinBox::down-arrow {
@@ -302,27 +370,27 @@ QSpinBox::up-arrow, QSpinBox::down-arrow {
    ========================================================================== */
 
 QScrollArea {
-    background-color: #FFFFFF;
-    border: 1px solid #E8EAED;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border: 1px solid var(--border-light); /* Use theme variable */
     border-radius: 8px;
 }
 
 QScrollBar:vertical {
-    background-color: #F8F9FA;
+    background-color: var(--bg-secondary); /* Use theme variable */
     width: 12px;
     border-radius: 6px;
     margin: 0;
 }
 
 QScrollBar::handle:vertical {
-    background-color: #DADCE0;
+    background-color: var(--border-medium); /* Use theme variable */
     border-radius: 6px;
     min-height: 20px;
     margin: 2px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background-color: #A020F0;
+    background-color: var(--primary-purple);
 }
 
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
@@ -331,21 +399,21 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 }
 
 QScrollBar:horizontal {
-    background-color: #F8F9FA;
+    background-color: var(--bg-secondary); /* Use theme variable */
     height: 12px;
     border-radius: 6px;
     margin: 0;
 }
 
 QScrollBar::handle:horizontal {
-    background-color: #DADCE0;
+    background-color: var(--border-medium); /* Use theme variable */
     border-radius: 6px;
     min-width: 20px;
     margin: 2px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background-color: #A020F0;
+    background-color: var(--primary-purple);
 }
 
 /* ==========================================================================
@@ -353,8 +421,8 @@ QScrollBar::handle:horizontal:hover {
    ========================================================================== */
 
 QMenuBar {
-    background-color: #FFFFFF;
-    border-bottom: 1px solid #E8EAED;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border-bottom: 1px solid var(--border-light); /* Use theme variable */
     padding: 4px;
 }
 
@@ -362,37 +430,41 @@ QMenuBar::item {
     background-color: transparent;
     padding: 8px 12px;
     border-radius: 4px;
-    color: #202124;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-body-medium);
 }
 
 QMenuBar::item:selected {
-    background-color: #E8F0FE;
-    color: #A020F0;
+    background-color: var(--bg-hover);
+    color: var(--primary-purple);
 }
 
 QMenu {
-    background-color: #FFFFFF;
-    border: 1px solid #E8EAED;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border: 1px solid var(--border-light); /* Use theme variable */
     border-radius: 8px;
     padding: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-medium); /* Use theme variable */
 }
 
 QMenu::item {
     background-color: transparent;
     padding: 8px 16px;
     border-radius: 4px;
-    color: #202124;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-body-medium);
 }
 
 QMenu::item:selected {
-    background-color: #E8F0FE;
-    color: #A020F0;
+    background-color: var(--bg-hover);
+    color: var(--primary-purple);
 }
 
 QMenu::separator {
     height: 1px;
-    background-color: #E8EAED;
+    background-color: var(--border-light); /* Use theme variable */
     margin: 4px 8px;
 }
 
@@ -401,9 +473,9 @@ QMenu::separator {
    ========================================================================== */
 
 QToolBar {
-    background-color: #FFFFFF;
+    background-color: var(--bg-panel); /* Use theme variable */
     border: none;
-    border-bottom: 1px solid #E8EAED;
+    border-bottom: 1px solid var(--border-light); /* Use theme variable */
     padding: 8px;
     spacing: 4px;
 }
@@ -413,21 +485,21 @@ QToolBar QToolButton {
     border: 1px solid transparent;
     border-radius: 6px;
     padding: 8px;
-    color: #202124;
+    color: var(--text-primary); /* Use theme variable */
 }
 
 QToolBar QToolButton:hover {
-    background-color: #E8F0FE;
-    border-color: #A020F0;
-    color: #A020F0;
+    background-color: var(--bg-hover); /* Consistent hover */
+    border-color: var(--primary-purple);
+    color: var(--primary-purple);
 }
 
 QToolBar QToolButton:pressed {
-    background-color: #D2E3FC;
+    background-color: var(--bg-pressed); /* Consistent pressed */
 }
 
 QToolBar::separator {
-    background-color: #E8EAED;
+    background-color: var(--border-light); /* Use theme variable */
     width: 1px;
     margin: 4px 8px;
 }
@@ -437,10 +509,11 @@ QToolBar::separator {
    ========================================================================== */
 
 QStatusBar {
-    background-color: #F8F9FA;
-    border-top: 1px solid #E8EAED;
-    color: #5F6368;
+    background-color: var(--bg-secondary); /* Use theme variable */
+    border-top: 1px solid var(--border-light); /* Use theme variable */
+    color: var(--text-secondary);
     padding: 4px 8px;
+    font-size: var(--font-size-body-small); /* Smaller font for status bar */
 }
 
 QStatusBar::item {
@@ -452,15 +525,61 @@ QStatusBar::item {
    ========================================================================== */
 
 QDialog {
-    background-color: #FFFFFF;
-    border: 1px solid #E8EAED;
-    border-radius: 12px;
+    background-color: var(--bg-panel); /* Use panel background */
+    border: none; /* MD3 dialogs are borderless, rely on shadow */
+    border-radius: 28px; /* MD3 standard for dialogs */
+    box-shadow: var(--shadow-heavy); /* Prominent shadow for elevation */
+    padding: 24px; /* Internal padding for the dialog content area */
+}
+
+/* Styling for QDialog title bar - often OS controlled, but can be influenced */
+QDialog TitleBar { /* This selector might not work directly, depends on Qt version/platform plugins */
+    background-color: var(--bg-panel); /* Try to match dialog bg */
+    padding: 16px 24px; /* Ample padding for title area */
+}
+
+QDialog QLabel#dialogTitleLabel { /* If a custom title label is used with this object name */
+    font-size: var(--font-size-title-large);
+    font-weight: var(--font-weight-medium); /* Changed from 600 */
+    color: var(--text-primary);
+    padding-bottom: 16px;
+}
+
+/* Specific label styling in dialogs */
+QDialog QLabel#infoLabel {
+    color: var(--text-secondary);
+    font-size: var(--font-size-body-small);
+    font-weight: var(--font-weight-regular); /* Explicitly set */
+    /* font-style: italic; */
+}
+
+
+QDialogButtonBox {
+    spacing: 8px; /* MD3 standard spacing between buttons */
+    padding-top: 16px; /* Space between dialog content and button box */
 }
 
 QDialogButtonBox QPushButton {
-    min-width: 80px;
-    padding: 8px 16px;
+    /* Buttons in QDialogButtonBox should now inherit global QPushButton styles.
+       The new global QPushButton style has padding: 10px 24px.
+       The previous QDialogButtonBox QPushButton had min-width: 80px and padding: 8px 16px.
+       The new global styles should be sufficient. We can remove these specific overrides
+       or ensure they align with MD3 guidance for dialog buttons if different.
+       For now, let's assume global styles are fine and remove specific padding/min-width here.
+       If buttons appear too large or small, these can be reinstated with MD3 values.
+    */
+    /* min-width: 80px; */ /* Example: keep min-width if needed */
+    /* padding: 8px 16px; */ /* Example: keep specific padding if needed */
 }
+
+/* Ensure QSeparators within dialogs are styled if used */
+QDialog QFrame[frameShape="HLine"] {
+    border: none;
+    border-top: 1px solid var(--border-light);
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
 
 /* ==========================================================================
    Special Components
@@ -468,9 +587,9 @@ QDialogButtonBox QPushButton {
 
 /* Material Design Navigation Rail (Left Sidebar) */
 QWidget#navigationRail {
-    background-color: #FFFFFF;
-    border-right: 1px solid #E8EAED;
-    min-width: 56px;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border-right: 1px solid var(--border-light); /* Use theme variable */
+    min-width: 56px; /* From ModernDesignConstants.NAV_RAIL_WIDTH */
     max-width: 56px;
 }
 
@@ -478,60 +597,71 @@ QWidget#navigationRail {
 QPushButton.nav_rail_button {
     background-color: transparent;
     border: none;
-    border-radius: 16px;
-    padding: 8px;
-    margin: 4px;
+    border-radius: 20px; /* To make 40x40px button circular */
+    padding: 8px; /* Keep padding for icon spacing */
+    margin: 4px 8px; /* Vertical margin 4px, Horizontal margin 8px for centering in 56px rail */
     min-width: 40px;
     min-height: 40px;
     max-width: 40px;
     max-height: 40px;
+    color: var(--text-secondary); /* Default icon color */
 }
 
 QPushButton.nav_rail_button:hover {
-    background-color: rgba(160, 32, 240, 0.08);
+    background-color: var(--primary-purple-alpha);
+    color: var(--primary-purple); /* Icon color changes on hover */
 }
 
 QPushButton.nav_rail_button:pressed {
-    background-color: rgba(160, 32, 240, 0.12);
+    background-color: rgba(var(--primary-purple-rgb), 0.15); /* Slightly darker pressed state */
 }
 
 QPushButton.nav_rail_button:checked {
-    background-color: rgba(160, 32, 240, 0.12);
-    color: #A020F0;
+    background-color: var(--primary-purple-alpha); /* Tonal fill for selected state */
+    color: var(--primary-purple); /* Icon is primary color when selected */
+    /* To make it more like MD3 "active indicator" use a stronger fill:
+    background-color: var(--primary-purple-light);
+    color: var(--primary-purple-dark);
+    Or use a pill shape indicator - harder with QSS only for the icon itself */
 }
+
+QPushButton.nav_rail_button:checked:hover {
+    background-color: rgba(var(--primary-purple-rgb), 0.15); /* Darken checked state on hover */
+}
+
 
 /* Side Panel (Right) */
 QWidget#sidePanel {
-    background-color: #FFFFFF;
-    border-left: 1px solid #E8EAED;
-    min-width: 280px;
+    background-color: var(--bg-panel); /* Use theme variable */
+    border-left: 1px solid var(--border-light); /* Use theme variable */
+    min-width: 280px; /* From ModernDesignConstants.SIDE_PANEL_WIDTH */
     max-width: 280px;
 }
 
 /* Canvas Area */
 QWidget#canvasArea {
-    background-color: #F8F9FA;
-    border: 1px solid #E8EAED;
+    background-color: var(--bg-main); /* Use theme variable */
+    border: 1px solid var(--border-light); /* Use theme variable */
     border-radius: 8px;
 }
 
 /* Material Design Color Bar */
 QPushButton#materialColorBar {
-    background-color: #A020F0;
+    background-color: var(--primary-purple);
     border: none;
-    border-radius: 4px;
+    border-radius: 4px; /* Consider 8px for consistency if it looks good */
     min-height: 56px;
     font-weight: 500;
-    color: #FFFFFF;
+    color: var(--text-inverse);
 }
 
 QPushButton#materialColorBar:hover {
-    background-color: #8C1AC9;
-    box-shadow: 0 2px 4px rgba(160, 32, 240, 0.3);
+    background-color: var(--primary-purple-dark);
+    box-shadow: var(--shadow-medium); /* Use defined shadow */
 }
 
 QPushButton#materialColorBar:pressed {
-    background-color: #7A1AB8;
+    background-color: var(--primary-purple-dark); /* Consistent with primary button pressed */
 }
 
 /* Recent Colors Grid */
@@ -543,8 +673,8 @@ QWidget#recentColorsGrid {
 
 /* Canvas Size Controls */
 QWidget#canvasSizeControls {
-    background-color: #F8F9FA;
-    border: 1px solid #E8EAED;
+    background-color: var(--bg-main); /* Use theme variable */
+    border: 1px solid var(--border-light); /* Use theme variable */
     border-radius: 6px;
     padding: 12px;
 }
@@ -558,9 +688,17 @@ QWidget:focus {
 }
 
 QPushButton:focus {
-    border-color: #A020F0;
-    box-shadow: 0 0 0 2px rgba(160, 32, 240, 0.2);
+    /* MD3 uses a visible focus ring. This provides a primary-colored shadow */
+    /* For non-filled buttons, ensure border is also visible or use outline */
+    box-shadow: 0 0 0 2px rgba(var(--primary-purple-rgb), 0.3);
+    border-color: var(--primary-purple); /* Ensure border color changes for outlined/text buttons */
 }
+
+/* Special focus for primary buttons to ensure visibility over filled background */
+QPushButton#primaryButton:focus, QPushButton.primary:focus {
+    box-shadow: 0 0 0 3px rgba(var(--primary-purple-rgb), 0.4), var(--shadow-medium);
+}
+
 
 /* ==========================================================================
    Responsive and Accessibility
@@ -585,9 +723,15 @@ QWidget[accessibleName="high-contrast"] QPushButton:checked {
 
 /* Focus indicators for accessibility */
 *:focus {
-    outline: 2px solid #A020F0;
+    /* Using var(--border-focus) which is already the new primary color */
+    outline: 2px solid var(--border-focus);
     outline-offset: 2px;
 }
+
+/* Remove the generic *:focus if QPushButton:focus is handled well, */
+/* otherwise, ensure it doesn't override specific button focus styles. */
+/* For now, specific QPushButton:focus will take precedence. */
+
 
 /* Minimum touch target sizes for accessibility */
 QPushButton.tool_button {

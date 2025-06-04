@@ -112,8 +112,9 @@ class PreferencesDialog(QDialog):
         
         # Language info
         info_label = QLabel(tr_pref("language_restart_note"))
-        info_label.setFont(QFont("Arial", 8))
-        info_label.setStyleSheet("color: #666666;")
+        info_label.setObjectName("infoLabel") # For QSS styling
+        # info_label.setFont(QFont("Arial", 8)) # Font styling can be handled by QSS if needed
+        # info_label.setStyleSheet("color: #666666;") # Replaced by QSS
         info_label.setWordWrap(True)
         lang_layout.addWidget(info_label)
         

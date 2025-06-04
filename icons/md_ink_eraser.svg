@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M16.21 4.16l4 4-.99.99-4.01-4 .99-.99zM6.92 2.49L2.49 6.92l-1.41 1.41 4 4.01L6.5 13.75l4-4L8.34 7.59l4-4L13.75 5l4.01-4-1.41-1.42L12.25 3.66l-4-4L6.92 2.49zM4.6 15.64L2 18.23l1.41 1.41 2.6-2.59L4.6 15.64zm10.08 1.41L12.1 19.64l1.41 1.41 2.59-2.59-1.42-1.41z"/>
+    <text x="2" y="20" font-size="6px">ink_eraser</text>
+</svg>

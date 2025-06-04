@@ -181,7 +181,7 @@ class ModernDesignConstants:
     # Color Grid
     COLOR_GRID_COLUMNS = 3
     COLOR_GRID_ROWS = 2
-    COLOR_GRID_SPACING = 4
+    COLOR_GRID_SPACING = 8 # Increased from 4 to 8 for MD3 alignment
     
     # ==========================================================================
     # Accessibility

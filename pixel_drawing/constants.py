@@ -50,12 +50,20 @@ class AppConstants:
     TMP_EXTENSION = ".tmp"
     BAK_EXTENSION = ".bak"
     
-    # Icon paths
-    ICON_BRUSH = "icons/paint-brush.svg"
-    ICON_FILL = "icons/paint-bucket.svg"
-    ICON_ERASER = "icons/eraser.svg"
-    ICON_COLOR_PICKER = "icons/eyedropper.svg"
-    ICON_PAN = "icons/hand.svg"
+    # Icon paths (Material Design Symbols)
+    ICON_BRUSH = "icons/md_brush.svg"
+    ICON_FILL = "icons/md_format_paint.svg"
+    ICON_ERASER = "icons/md_ink_eraser.svg"
+    ICON_COLOR_PICKER = "icons/eyedropper.svg" # Keep existing, or find MD equivalent if needed
+    ICON_PAN = "icons/md_pan_tool.svg"
+
+    # Navigation Rail Icons (Material Design Symbols)
+    ICON_MD_ADD = "icons/md_add.svg"
+    ICON_MD_FOLDER_OPEN = "icons/md_folder_open.svg"
+    ICON_MD_SAVE = "icons/md_save.svg"
+    ICON_MD_PUBLISH = "icons/md_publish.svg"
+    ICON_MD_UNDO = "icons/md_undo.svg"
+    ICON_MD_REDO = "icons/md_redo.svg"
     
     # Performance settings
     UPDATE_TIMER_INTERVAL = 16  # ~60 FPS
